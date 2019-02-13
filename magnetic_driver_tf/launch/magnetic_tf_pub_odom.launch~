@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="lighthouse_navigation" type="magnetic_tf_pub" name="magnetic_tf_pub" output="screen">
+
+    <param name="magnetic_head_is_forward"                    value="false"   type="bool"/>
+    <param name="magnetic_tail_is_forward"                    value="true"    type="bool"/>
+    <param name="distance_magnetic_head_to_robot_center"      value="0.441"   type="double"/>
+    <param name="distance_magnetic_tail_to_robot_center"      value="0.441"   type="double"/>
+    <param name="points_num_consider_detected_magnetic_flag"  value="11"       type="int"/>
+    <param name="fake_pose_y_out_track_cm"                    value="8.5"     type="double"/>
+
+  </node>
+</launch>

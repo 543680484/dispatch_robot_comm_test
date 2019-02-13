@@ -1,0 +1,31 @@
+-------拷贝程序scp /home/wang/lighthouse_navigationtemp.tar.gz hitrobot@10.42.0.1:/home/hitrobot
+-------编译sudo cp /opt/ros/indigo/share/catkin/cmake/toplevel.cmake ./CMakeLists.txt
+-------拷贝launch
+    <node name="scan_filter_lighthouse" pkg="laser_filters" type="scan_to_scan_filter_chain" output="screen">
+        <remap from="scan" to="scan"/>
+        <remap from="scan_filtered" to="scan_filtered_lighthouse"/>
+        <rosparam>
+            scan_filter_chain:
+            - type: laser_filters/LaserArrayFilter
+              name: laser_median_filter
+              params:
+                range_filter_chain:
+                  - name: median_5
+                    type: filters/MultiChannelMedianFilterFloat
+                    params:
+                      number_of_observations: 5
+                      unused: 10
+                intensity_filter_chain:
+                  - name: median_5
+                    type: filters/MultiChannelMedianFilterFloat
+                    params:
+                      number_of_observations: 5
+                      unused: 10
+        </rosparam>
+    </node>
+
+    <include file="$(find lighthouse_navigation)/launch/lighthouse_recognize.launch"/>
+    <include file="$(find lighthouse_navigation)/launch/lighthouse_planner.launch"/>
+-------拷贝shell文件
+改yaml文件
+设置三角板在map里的位置

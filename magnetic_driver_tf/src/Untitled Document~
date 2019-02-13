@@ -1,0 +1,45 @@
+//            if ( head_detected_magnetic_marker_ || tail_detected_magnetic_marker_ )
+//            {
+//                int sign_by_orientation = 1;//go_forward:1,go_backward:-1
+
+//                if ( head_detected_magnetic_marker_ )
+//                {
+//                    sign_by_orientation = 1;
+//                    count_detected_tail_marker_ = true;
+//                }
+//                else
+//                {
+//                    sign_by_orientation = -1;
+//                    if ( count_detected_tail_marker_ )
+//                    {
+//                        detected_tail_marker_times += 1;
+//                        count_detected_tail_marker_ = false;
+//                    }
+//                }
+
+//                marker_in_odometry_diff = sign_by_orientation * GetMarkerInOdometryDiff();
+//            }
+
+//            if ( head_detected_magnetic_marker_ || tail_detected_magnetic_marker_ )
+//            {
+//                int sign_by_orientation = 1;//go_forward:1,go_backward:-1
+//                if ( !get_run_orientation_ )
+//                {
+//                    if ( head_detected_magnetic_marker_ )
+//                    {
+//                        sign_by_orientation = 1;
+//                        count_detected_tail_marker_ = true;
+//                    }
+//                    else
+//                    {
+//                        sign_by_orientation = -1;
+//                        if ( count_detected_tail_marker_ )
+//                        {
+//                            detected_tail_marker_times += 1;
+//                            count_detected_tail_marker_ = false;
+//                        }
+//                    }
+//                    get_run_orientation_ = true;
+//                }
+//                marker_in_odometry_diff = sign_by_orientation * GetMarkerInOdometryDiff();
+//            }

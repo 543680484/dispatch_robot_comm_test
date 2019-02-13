@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node name="magnetic_driver_hinson_head" pkg="magnetic_driver_tf" type="magnetic_driver_hinson" output="screen">
+      <rosparam>
+          serial_dev: /dev/ttyS2
+          magnetic_point: 16
+          pub_topic_name: /magnetic_head_data
+      </rosparam>
+  </node>
+
+
+  <node name="magnetic_driver_hinson_tail" pkg="magnetic_driver_tf" type="magnetic_driver_hinson" output="screen">
+      <rosparam>
+          serial_dev: /dev/ttyS3
+          magnetic_point: 16
+          pub_topic_name: /magnetic_tail_data
+      </rosparam>
+  </node>
+
+
+  <node pkg="magnetic_driver_tf" type="magnetic_tf_pub" name="magnetic_tf_pub" output="screen">
+
+    <param name="magnetic_head_is_forward"                      value="false"   type="bool"/>
+    <param name="magnetic_tail_is_forward"                      value="true"    type="bool"/>
+    <param name="distance_magnetic_head_to_robot_center"        value="0.441"   type="double"/>
+    <param name="distance_magnetic_tail_to_robot_center"        value="0.441"   type="double"/>
+    <param name="points_num_consider_detected_magnetic_marker"  value="8"       type="int"/>
+    <param name="fake_pose_y_out_track_cm"                      value="8.5"     type="double"/>
+    <param name="output_odometry_from_marker"                   value="false"   type="bool"/>
+
+  </node>
+
+</launch>

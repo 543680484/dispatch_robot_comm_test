@@ -1,0 +1,32 @@
+<launch>
+  <node pkg="lighthouse_navigation" type="lighthouse_planner" name="lighthouse_planner" output="screen">
+
+    <!--AGV4.0 param-->
+    <param name="length_agv_center_to_head"                    value="0.345" type="double"/>
+
+    <!--triangle-->
+    <!--param name="p_angle_target"                            value="5.0"    type="double"/>
+    <param name="p_angle_first_turn"                           value="5.5"    type="double"/>
+    <param name="p_angle_speed"                                value="1.8"    type="double"/>
+    <param name="p_erf_angle_control"                          value="1.0"    type="double"/-->
+
+    <!--target-->
+    <param name="p_angle_target"                               value="4.0"    type="double"/>
+    <param name="p_angle_first_turn"                           value="5.0"    type="double"/>
+    <param name="p_angle_speed"                                value="1.5"    type="double"/>
+    <param name="p_erf_angle_control"                          value="1.0"    type="double"/>
+
+    <param name="rho_threshold"                                value="1.0"    type="double"/>
+    <param name="erf_rho_threshold"                            value="0.3"    type="double"/>
+    <param name="max_angular"                                  value="0.15"   type="double"/>
+    <param name="max_linear"                                   value="0.3"    type="double"/>
+    <param name="x_tolerate_offset"                            value="0.01"   type="double"/>
+    <param name="y_tolerate_offset"                            value="0.01"   type="double"/>
+    <param name="theat_tolerate_offset"                        value="0.01"   type="double"/>
+
+    <param name="target_offset_lighthouse_x"                   value="-0.25"   type="double"/>
+    <param name="target_offset_lighthouse_y"                   value="0.0"    type="double"/>
+    <param name="target_offset_lighthouse_theta"               value="0.0"    type="double"/>
+
+  </node>
+</launch>
