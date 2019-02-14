@@ -984,6 +984,34 @@ void Dispatch::ExecuteTask()
     }
 }
 
+inline int AGVWrite(int fd, const char *buffer,int length)
+{
+    int bytes_left;
+    int written_bytes;
+    const char *ptr;
+
+    ptr=buffer;
+    bytes_left=length;
+    while(bytes_left>0)
+    {
+        written_bytes=write(fd,ptr,bytes_left);
+        if(written_bytes<=0)
+        {
+            if(errno==EINTR)
+            {
+                written_bytes=0;
+                ROS_FATAL("INTERRUPT ERROR!!!");
+            }
+            else
+                return(-1);
+        }
+        bytes_left-=written_bytes;
+        ptr+=written_bytes;
+    }
+    return(0);
+}
+
+
 void Dispatch::Run()
 {
     char buffer[BUFFERSIZE];
@@ -1068,11 +1096,11 @@ void Dispatch::Run()
         string msg_agv_to_dispatch;
         MsgAGVToDispatch("AGV", msg_agv_to_dispatch);
 
-        int write_length = write(socket_fd_, msg_agv_to_dispatch.c_str(), msg_agv_to_dispatch.size());
+        int write_length = AGVWrite(socket_fd_, msg_agv_to_dispatch.c_str(), msg_agv_to_dispatch.size());
 
         if (write_length < 0)
         {
-            ROS_ERROR("agv write to dispatch ERROR");
+            ROS_ERROR("CONNECTION CLOSED");
             connect_state = false;
             close(socket_fd_);
             ros::Duration ( 1.0 ).sleep();
