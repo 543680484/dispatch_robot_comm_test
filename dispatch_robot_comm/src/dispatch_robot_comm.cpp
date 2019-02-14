@@ -1,4 +1,5 @@
 #include <dispatch_robot_comm/dispatch_robot_comm.h>
+#include <glog/logging.h>
 
 #define RadianToAngle(X) ((X)*180.0/M_PI)
 #define AngleToRadian(X) ((X)*M_PI/180.0)
@@ -61,7 +62,8 @@ bool Dispatch::ConnectServer (string ip_str, int port )
 
     if ( ( socket_fd_ = socket ( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
     {
-        ROS_ERROR ( "create socket error: %s(errno:%d)\n)", strerror ( errno ), errno );
+        //ROS_ERROR ( "create socket error: %s(errno:%d)\n)", strerror ( errno ), errno );
+        LOG(ERROR) << "create socket error: " << strerror(errno) << "errno:" << errno;
         return false;
     }
 
@@ -69,13 +71,15 @@ bool Dispatch::ConnectServer (string ip_str, int port )
     server_addr.sin_port = htons(port);
     if ( inet_pton ( AF_INET, ip_str.c_str(), &server_addr.sin_addr ) <= 0 )
     {
-        ROS_ERROR ( "inet_pton error: %s(errno:%d))\n", strerror ( errno ), errno );
+        //ROS_ERROR ( "inet_pton error: %s(errno:%d))\n", strerror ( errno ), errno );
+        LOG(ERROR) << "create socket error: " << strerror(errno) << "errno:" << errno;
         return false;
     }
 
     if ( SetNonBlock ( socket_fd_, ( struct sockaddr* ) &server_addr, sizeof ( server_addr ), 0, 1000000 ) == 0 )
     {
-        ROS_INFO ( "igv connected!" );
+        //ROS_INFO ( "igv connected!" );
+        LOG(INFO) << "igv connected";
         return true;
     }
 
@@ -126,7 +130,8 @@ int Dispatch::SetNonBlock ( const int sockfd, const struct sockaddr* serv_addr, 
     }
     else
     {
-        ROS_DEBUG ( "select error: sockfd  not set" );
+       //ROS_DEBUG ( "select error: sockfd  not set" );
+        LOG(WARNING) << "select error: sockfd  not set";
     }
 GotoTest:
     fcntl ( sockfd, F_SETFL, flags );
@@ -180,7 +185,8 @@ void Dispatch::NavigationControlStatusCallback(const yocs_msgs::NavigationContro
     {
         trajectorie_finished_ = true;
         //waypoint_name_trajectorie_finished_ = navigation_control_msg_ptr->waypoint_name;
-        ROS_INFO ("call back trajectorie finished: %s", waypoint_name_trajectorie_finished_.c_str());
+        //ROS_INFO ("call back trajectorie finished: %s", waypoint_name_trajectorie_finished_.c_str());
+        LOG(INFO) <<"call back trajectorie finished:"<< waypoint_name_trajectorie_finished_.c_str();
     }
 }
 
@@ -237,7 +243,8 @@ bool Dispatch::NavigationAction(yocs_msgs::Trajectory& trajectory_msg, const Jso
     }
     else
     {
-        ROS_ERROR("no move point");
+        //ROS_ERROR("no move point");
+        LOG(ERROR) << "no move point";
         return false;
     }
 
@@ -274,7 +281,8 @@ bool Dispatch::NavigationActionLastPoint(yocs_msgs::Trajectory& trajectory_msg, 
     }
     else
     {
-        ROS_ERROR("no move point");
+        //ROS_ERROR("no move point");
+        LOG(ERROR) << "no move point";
         return false;
     }
 
@@ -299,7 +307,9 @@ bool Dispatch::ChangeNavModeExist(yocs_msgs::Trajectory& trajectory_msg, const J
     }
     else
     {
-        ROS_ERROR("undefined nav mode: %s", nav_mode.c_str());
+        //ROS_ERROR("undefined nav mode: %s", nav_mode.c_str());
+        LOG(ERROR) << "undefined nav mode: "<< nav_mode.c_str();
+
         return false;
     }
 
@@ -351,7 +361,8 @@ bool Dispatch::ChangeNavMode(yocs_msgs::Trajectory& trajectory_msg, const Json::
     }
     else
     {
-        ROS_ERROR("undefined nav mode: %s", nav_mode.c_str());
+        //ROS_ERROR("undefined nav mode: %s", nav_mode.c_str());
+        LOG(ERROR) << "undefined nav mode: "<< nav_mode.c_str();
         return false;
     }
 
@@ -457,7 +468,8 @@ bool Dispatch::RollerMotor( yocs_msgs::Trajectory& trajectory_msg, const Json::V
         }
         else
         {
-            ROS_ERROR("undefined nav mode: %s", roller_action.c_str());
+            //ROS_ERROR("undefined nav mode: %s", roller_action.c_str());
+            LOG(ERROR) << "undefined nav mode: "<< roller_action.c_str();
             return false;
         }
     }
@@ -475,7 +487,8 @@ bool Dispatch::RollerMotor( yocs_msgs::Trajectory& trajectory_msg, const Json::V
         }
         else
         {
-            ROS_ERROR("undefined nav mode: %s", roller_action.c_str());
+            //ROS_ERROR("undefined nav mode: %s", roller_action.c_str());
+            LOG(ERROR) << "undefined nav mode: "<< roller_action.c_str();
             return false;
         }
     }
@@ -493,13 +506,16 @@ bool Dispatch::RollerMotor( yocs_msgs::Trajectory& trajectory_msg, const Json::V
         }
         else
         {
-            ROS_ERROR("undefined nav mode: %s", roller_action.c_str());
+            //ROS_ERROR("undefined nav mode: %s", roller_action.c_str());
+            LOG(ERROR) << "undefined nav mode: "<< roller_action.c_str();
+
             return false;
         }
     }
     else
     {
-        ROS_ERROR("undefined nav mode: %s", roller_num.c_str());
+        //ROS_ERROR("undefined nav mode: %s", roller_num.c_str());
+        LOG(ERROR) << "undefined nav mode: "<< roller_num.c_str();
         return false;
     }
 
@@ -524,7 +540,9 @@ bool Dispatch::LocatingPin(yocs_msgs::Trajectory& trajectory_msg, const Json::Va
         }
         else
         {
-            ROS_ERROR("undefined nav mode: %s", pin_action.c_str());
+            //ROS_ERROR("undefined nav mode: %s", pin_action.c_str());
+            LOG(ERROR) << "undefined nav mode: "<< pin_action.c_str();
+
             return false;
         }
     }
@@ -542,7 +560,9 @@ bool Dispatch::LocatingPin(yocs_msgs::Trajectory& trajectory_msg, const Json::Va
         }
         else
         {
-            ROS_ERROR("undefined nav mode: %s", pin_action.c_str());
+            //ROS_ERROR("undefined nav mode: %s", pin_action.c_str());
+            LOG(ERROR) << "undefined nav mode: "<< pin_action.c_str();
+
             return false;
         }
     }
@@ -560,13 +580,15 @@ bool Dispatch::LocatingPin(yocs_msgs::Trajectory& trajectory_msg, const Json::Va
         }
         else
         {
-            ROS_ERROR("undefined nav mode: %s", pin_action.c_str());
+            //ROS_ERROR("undefined nav mode: %s", pin_action.c_str());
+            LOG(ERROR) << "undefined nav mode: "<< pin_action.c_str();
             return false;
         }
     }
     else
     {
-        ROS_ERROR("undefined nav mode: %s", pin_num.c_str());
+        //ROS_ERROR("undefined nav mode: %s", pin_num.c_str());
+        LOG(ERROR) << "undefined nav mode: " << pin_num.c_str();
         return false;
     }
 
@@ -635,12 +657,14 @@ bool Dispatch::DeserializedJson(std::string strValue)
     if(reader.parse(strValue, json_object))
     {
         Json::Value dev_data = json_object["Dev_Data"];
-        ROS_INFO("recv data time");
+        //ROS_INFO("recv data time");
+        LOG(INFO) << "recv data time";
         cout << "dev_data:" << dev_data << endl;
 
         if ( dev_data.empty() )
         {
-            ROS_ERROR("dev data is empty");
+            //ROS_ERROR("dev data is empty");
+            LOG(ERROR) << "dev data is empty";
             return false;
         }
 
@@ -651,7 +675,8 @@ bool Dispatch::DeserializedJson(std::string strValue)
 
         if ( time_stamp_recv_sec_ == time_stamp_sec && time_stamp_recv_usec_ == time_stamp_usec )
         {
-            ROS_WARN("recv same command !!!");
+            //ROS_WARN("recv same command !!!");
+            LOG(WARNING) << "recv same command !!!";
             return false;
         }
 
@@ -676,7 +701,8 @@ bool Dispatch::DeserializedJson(std::string strValue)
 
             if ( MoveData.empty() )
             {
-                ROS_ERROR("move empty");
+                //ROS_ERROR("move empty");
+                LOG(ERROR) << "move empty";
                 return false;
             }
 //            if ( !NavigationAction(trajectory_msg, MoveData) )
@@ -691,7 +717,8 @@ bool Dispatch::DeserializedJson(std::string strValue)
 
             if ( procData.empty() )
             {
-                ROS_ERROR("proc empty");
+                //ROS_ERROR("proc empty");
+                LOG(ERROR) << "proc empty";
                 return false;
             }
 
@@ -749,7 +776,9 @@ bool Dispatch::DeserializedJson(std::string strValue)
             }
             else
             {
-                ROS_ERROR("undefined proc name: %s", proc_name_.c_str());
+                //ROS_ERROR("undefined proc name: %s", proc_name_.c_str());
+                LOG(ERROR) << "undefined proc name: "<< comm_type_.c_str();
+
                 return false;
             }
         }
@@ -760,7 +789,8 @@ bool Dispatch::DeserializedJson(std::string strValue)
         }
         else
         {
-            ROS_ERROR("undefined comm type: %s", comm_type_.c_str());
+            //ROS_ERROR("undefined comm type: %s", comm_type_.c_str());
+            LOG(ERROR) << "undefined comm type: "<< comm_type_.c_str();
             return false;
         }
 
@@ -771,7 +801,8 @@ bool Dispatch::DeserializedJson(std::string strValue)
     }
     else
     {
-        ROS_ERROR("parse error");
+        //ROS_ERROR("parse error");
+        LOG(ERROR) << "parse error";
         return false;
     }
 }
@@ -835,11 +866,13 @@ void Dispatch::MsgAGVToDispatch(string dev_type, string& msg_agv_to_dispatch)
         if ( need_hand_shake_ ) //握手
         {
             need_hand_shake_ = false;
-            ROS_INFO ("hand_shake AGVInfor[Comm_ID]: %d", dispatch_comm_id_);
+            //ROS_INFO ("hand_shake AGVInfor[Comm_ID]: %d", dispatch_comm_id_);
+            LOG(INFO) << "hand_shake AGVInfor[Comm_ID]: " << dispatch_comm_id_;
         }
         else //任务完成，状态复位
         {
-            ROS_INFO ("MsgAGVToDispatch trajectorie finished");
+            //ROS_INFO ("MsgAGVToDispatch trajectorie finished");
+            LOG(INFO) << "MsgAGVToDispatch trajectorie finished";
             answer_comm_id_ = 0;
             agv_move_result_ = task_status_;
             agv_proc_state_ = "Execute";
@@ -894,7 +927,8 @@ void Dispatch::ExecuteTask()
                 }
 
                 trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
-                ROS_INFO ("state machine trajectorie finished: %d", dispatch_comm_id_);
+                //ROS_INFO ("state machine trajectorie finished: %d", dispatch_comm_id_);
+                LOG(INFO) << "state machine trajectorie finished: " << dispatch_comm_id_;
 
                 if ( comm_mode_ == "need_finished_hand_shake" )
                 {
@@ -922,7 +956,8 @@ void Dispatch::ExecuteTask()
                 }
 
                 trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
-                ROS_INFO ("state machine trajectorie finished: %d", dispatch_comm_id_);
+                //ROS_INFO ("state machine trajectorie finished: %d", dispatch_comm_id_);
+                LOG(INFO) << "state machine trajectorie finished: " << dispatch_comm_id_;
 
                 if ( comm_mode_ == "need_finished_hand_shake" )
                 {
@@ -951,7 +986,8 @@ void Dispatch::ExecuteTask()
             }
 
             trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
-            ROS_INFO ("get new move, state machine to IDLE");
+            //ROS_INFO ("get new move, state machine to IDLE");
+            LOG(INFO) << "get new move, state machine to IDLE";
 
             task_state_ = IDLE;
             traj_exist_in_waypoints_ = false;
@@ -1000,7 +1036,8 @@ inline int AGVWrite(int fd, const char *buffer,int length)
             if(errno==EINTR)
             {
                 written_bytes=0;
-                ROS_FATAL("INTERRUPT ERROR!!!");
+                //ROS_FATAL("INTERRUPT ERROR!!!");
+                LOG(FATAL) << "INTERRUPT ERROR!!!";
             }
             else
                 return(-1);
@@ -1017,7 +1054,13 @@ void Dispatch::Run()
     char buffer[BUFFERSIZE];
     bool connect_state = false;
 
-//    sleep(20);
+    google::InitGoogleLogging("KLH");
+
+    google::SetLogDestination(google::GLOG_FATAL, "../log/log_fatal_"); // 设置 google::FATAL 级别的日志存储路径和文件名前缀
+    google::SetLogDestination(google::GLOG_ERROR, "../log/log_error_"); //设置 google::ERROR 级别的日志存储路径和文件名前缀
+    google::SetLogDestination(google::GLOG_WARNING, "../log/log_warning_"); //设置 google::WARNING 级别的日志存储路径和文件名前缀
+    google::SetLogDestination(google::GLOG_INFO, "../log/log_info_"); //设置 google::INFO 级别的日志存储路径和文件名前缀
+ /*   sleep(20);*/
 //    ros::spinOnce();
 //    trajectorie_finished_ = false;
 
@@ -1040,7 +1083,8 @@ void Dispatch::Run()
             }
             else
             {
-                ROS_ERROR ( "setup connect to server failed! will retry in 1s" );
+                //ROS_ERROR ( "setup connect to server failed! will retry in 1s" );
+                LOG(ERROR) << "setup connect to server failed! will retry in 1s";
                 close(socket_fd_);
                 ros::Duration ( 1.0 ).sleep();
                 continue;
@@ -1084,7 +1128,8 @@ void Dispatch::Run()
         }
         else if ( recv_length == 0 )
         {
-            ROS_ERROR ( "disconnented from server! will retry in 1s" );
+            //ROS_ERROR ( "disconnented from server! will retry in 1s" );
+            LOG(ERROR) << "disconnented from server! will retry in 1s";
             connect_state = false;
             close(socket_fd_);
             ros::Duration ( 1.0 ).sleep();
@@ -1100,7 +1145,8 @@ void Dispatch::Run()
 
         if (write_length < 0)
         {
-            ROS_ERROR("CONNECTION CLOSED");
+            //ROS_ERROR("CONNECTION CLOSED");
+            LOG(ERROR) << "CONNECTION CLOSED";
             connect_state = false;
             close(socket_fd_);
             ros::Duration ( 1.0 ).sleep();

@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
     actionlib_msgs
 )
 
+find_package(glog REQUIRED)
+
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(JSONCPP jsoncpp)
 include_directories("${JSONCPP_INCLUDE_DIRS}")
@@ -49,7 +51,9 @@ include_directories(
 add_library(dispatch_robot_lib src/dispatch_robot_comm.cpp)
 target_link_libraries(dispatch_robot_lib
     ${catkin_LIBRARIES}
-    ${JSONCPP_LIBRARIES})
+    ${JSONCPP_LIBRARIES}
+    glog::glog
+    )
 
 add_executable(dispatch_robot_comm src/main.cpp)
 target_link_libraries(dispatch_robot_comm
