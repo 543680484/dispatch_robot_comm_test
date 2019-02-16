@@ -10,13 +10,15 @@ roslaunch dispatch_robot_comm dispatch_robot_comm.launch
 #### 1.Get the source code and change to it. e.g. cloning with git:
 
 ```
-git clone git@github.com:google/glog.git
+git clone https://github.com/google/glog
+sudo apt-get install autoconf automake libtool
 cd glog
 ```
 
 #### 2.Run CMake to configure the build tree.
 
 ```
+cmake 版本在3.0以上
 cmake -H. -Bbuild -G "Unix Makefiles"
 ```
 
@@ -32,9 +34,9 @@ cmake --build build
 
 
 
-|   日期    | 作者 |                     修改记录                      |
-| :-------: | :--: | :-----------------------------------------------: |
-| 2019-2-14 |  潘  | 1.socket通信函数write重写；2.增加谷歌日志系统glog |
-|           |      |                                                   |
-|           |      |                                                   |
+|    日期     |  作者  |                修改记录                |
+| :-------: | :--: | :--------------------------------: |
+| 2019-2-14 |  潘   | 1.socket通信函数write重写；2.增加谷歌日志系统glog |
+|           |      |                                    |
+|           |      |                                    |
 
