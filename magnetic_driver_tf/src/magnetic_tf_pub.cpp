@@ -34,7 +34,6 @@ MagneticTfPub::MagneticTfPub()
     , odometry_marker_start_()
     , odometry_marker_end_()
     , get_marker_middle_pose_(false)
-//    , need_set_bzp_min_vel_x_(true)
 {
     odom_sub_ = nh_.subscribe("/odom", 1, &MagneticTfPub::OdomCallback, this);
     task_switch_sub_ = nh_.subscribe("/task_switch", 1, &MagneticTfPub::TaskSwitchCallback, this );
@@ -165,7 +164,6 @@ void MagneticTfPub::ResetParam()
     detected_head_marker_times_ = 0;
 
     get_marker_middle_pose_ = false;
-//    need_set_bzp_min_vel_x_ = true;
 }
 
 void MagneticTfPub::StopRun()
@@ -426,11 +424,6 @@ void MagneticTfPub::Run()
             if ( head_or_tail_ != NON && get_marker_middle_pose_ )
             {
                 marker_in_odometry_diff = sign_by_orientation * GetMarkerInOdometryDiff();//param_test_
-//                if ( need_set_bzp_min_vel_x_ )
-//                {
-//                    int system_rtn = system("rosrun dynamic_reconfigure dynparam set /move_base/BZPlannerROS min_vel_x 0.02");
-//                    need_set_bzp_min_vel_x_ = false;
-//                }
             }
 
             GetMagneticPoseInRobot(magnetic_tf_x, magnetic_tf_y, magnetic_tf_theta);

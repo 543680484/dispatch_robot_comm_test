@@ -34,8 +34,6 @@ class MagneticTfPub
     bool can_detected_tail_marker_;
     bool can_detected_head_marker_;
 
-//    bool need_set_bzp_min_vel_x_;
-
     int signal_for_head_out_track_;
     int signal_for_tail_out_track_;
     int detected_tail_marker_times_;
