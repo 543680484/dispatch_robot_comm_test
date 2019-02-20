@@ -1,10 +1,8 @@
 <?xml version="1.0"?>
 <launch>
   <node name="dispatch_robot_comm" pkg="dispatch_robot_comm" type="dispatch_robot_comm" output="screen" />
-      <param name="server_ip"                 value="172.17.11.130"     type="string"/>
+      <param name="server_ip"                 value="192.168.4.179"     type="string"/>
       <param name="server_port"               value="10001"             type="int"/>
       <param name="dev_id"                    value="2"                 type="int"/>
-      <param name="magnetic_back_offset"      value="0.005"             type="double"/>
-      <!--param name="comm_mode"                 value="need_finished_hand_shake"        type="string"/-->
-      <param name="comm_mode"                 value="no_need_finished_hand_shake"     type="string"/>
+      <param name="magnetic_back_offset"      value="0.015"             type="double"/>
 </launch>

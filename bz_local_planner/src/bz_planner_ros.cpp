@@ -43,7 +43,9 @@ BZPlannerROS::BZPlannerROS() : odom_helper_("odom"),
                                relocation_frame_("map"),
                                motion_status_(NAVIGATION),
                                test_vel_(true),
-                               get_distance_start_to_goal_(false)
+                               magnetic_detect_status_sub_(),//add by wangcaijie
+                               magnetic_detected_(false),//add by wangcaijie
+                               get_distance_start_to_goal_(false)//add by wangcaijie
 {}
 
 BZPlannerROS::~BZPlannerROS()
@@ -59,6 +61,8 @@ void BZPlannerROS::initialize(std::string name,
         bz_plan_pub_ = pnh.advertise<nav_msgs::Path>("global_plan", 1);
         bz_ctrl_points_pub_ = pnh.advertise<nav_msgs::Path>("ctrl_points", 1);
         local_plan_pub_ = pnh.advertise<nav_msgs::Path>("local_plan", 1);
+        ros::NodeHandle nh; //add by wangcaijie
+        magnetic_detect_status_sub_ = nh.subscribe("/magnetic_detected", 1, &BZPlannerROS::MagneticDetectedCallback, this );//add by wangcaijie
         tf_ = tf;
         costmap_ros_ = costmap_ros;
         costmap_ros_->getRobotPose(current_pose_tf_);
@@ -101,6 +105,11 @@ void BZPlannerROS::initialize(std::string name,
     {
         ROS_WARN("Bezier planner has already been initialized, doing nothing.");
     }   
+}
+
+void BZPlannerROS::MagneticDetectedCallback( const std_msgs::BoolPtr& msg )
+{
+    magnetic_detected_ = msg->data;
 }
 
 bool BZPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& plan)
@@ -234,9 +243,6 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
                 {
                     tf_->waitForTransform("/map", global_frame_, ros::Time(0), ros::Duration(5.0));
                     tf_->transformPose("/map", ros::Time(0), current_pose, global_frame_, global_current_pose);
-                    cout << "!!!!!global_frame_: " << global_frame_ << endl;
-                    cout << "!!!!!current_pose in map: " << current_pose << endl;
-                    cout << "!!!!!global_current_pose in goal: " << global_current_pose << endl;
                 }
                 catch(tf::TransformException& ex)
                 {
@@ -244,7 +250,6 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
                     return false; //exit(1);
                 }
                 goal_pose_ = relocation_pose_;
-                cout << "!!!!!goal_pose_: " << goal_pose_ << endl;
                 pose_helper_.pose_gained_ =false;       
             }
 
@@ -253,9 +258,7 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
                 if(getLocalPose())
                 {   //ROS_ERROR("HA3");
                     goal_pose_ = relocation_goal_;
-                    //cout << "#####goal_pose_: " << goal_pose_ << endl;
                     global_current_pose = relocation_pose_;
-                    cout << "#####global_current_pose: " << global_current_pose.pose.position.x << "  " << global_current_pose.pose.position.y << endl;
                     pose_helper_.pose_gained_ = false;
                     // goal_helper_.pose_gained_ = false;
                 }
@@ -272,9 +275,6 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
         {
             tf_->waitForTransform("/map", global_frame_, ros::Time(0), ros::Duration(5.0));
             tf_->transformPose("/map", ros::Time(0), current_pose, global_frame_, global_current_pose);
-            cout << "-----global_frame_: " << global_frame_ << endl;
-            cout << "-----current_pose in map: " << current_pose << endl;
-            cout << "-----global_current_pose in goal: " << global_current_pose << endl;
         }
         catch(tf::TransformException& ex)
         {
@@ -291,7 +291,6 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
         // else if(!convert_global_)
         // {
             goal_pose_ = final_goal_;
-            cout << "-----goal_pose_: " << goal_pose_ << endl;
         //}
     }
     std::lock_guard<std::mutex> lk(dyn_params_mutex_);
@@ -300,8 +299,8 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     tf::poseMsgToTF(goal_pose_.pose, goal_pose_tf);
     double pyaw_angle = tf::getYaw(global_current_pose_tf.getRotation());
     double gyaw_angle = tf::getYaw(goal_pose_tf.getRotation());
-    printf("BEZpose: x: %.2lf, y: %.2lf, yaw: %.3lf\n", global_current_pose.pose.position.x, global_current_pose.pose.position.y, pyaw_angle);
-    printf("BEZgoal: x: %.2lf, y: %.2lf, yaw: %.3lf\n", goal_pose_.pose.position.x, goal_pose_.pose.position.y, gyaw_angle);
+    printf("BEZpose: x: %.2lf, y: %.2lf, yaw: %.4lf\n", global_current_pose.pose.position.x, global_current_pose.pose.position.y, pyaw_angle);
+    //printf("BEZgoal: x: %.2lf, y: %.2lf, yaw: %.4lf\n", goal_pose_.pose.position.x, goal_pose_.pose.position.y, gyaw_angle);
     if (!calcBezierVel(cmd_vel, bz_ctrl_points, global_current_pose, goal_pose_)) {
         return false;
     }
@@ -313,7 +312,7 @@ bool BZPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     double cost = calcObstacleCost(result_traj, costmap_ros_->getRobotFootprint());
     result_traj.cost_ = cost;
     publishLocalPlan(result_traj);//"local_plan"
-    printf("Vel x: %.2lf, y: %.2lf, yaw: %.4lf, cost: %.2lf\n", cmd_vel.linear.x, cmd_vel.linear.y, cmd_vel.angular.z, cost);
+    printf("Vel x: %.2lf, y: %.2lf, z: %.4lf, cost: %.2lf\n", cmd_vel.linear.x, cmd_vel.linear.y, cmd_vel.angular.z, cost);
     if(test_vel_)
     {
         cmd_vel.linear.x = 0.0;
@@ -349,7 +348,6 @@ bool BZPlannerROS::isGoalReached()
     if(goalReachSum(goal_reach_level_))
     {
         get_distance_start_to_goal_ = false; //add by wangcaijie
-        printf("GoalReached\n"); //add by wangcaijie
         return true;
     }
 
@@ -384,7 +382,10 @@ void BZPlannerROS::reconfigureCB(BZPlannerConfig &config, uint32_t level)
     motion_status_ = static_cast<BZPlannerROS::ud_enum>(config.motion_status);
     pose_helper_.setPoseTopic(relocation_pose_topic_);
     test_vel_ = config.test_vel;
+
+    magnetic_mode_ = config.magnetic_mode;
     distance_x_acc_ = config.distance_x_acc;
+    min_stop_vel_x_ = config.min_stop_vel_x;
     ROS_INFO("Updated bz_local_planner dynamic parameters");
 }
 
@@ -563,71 +564,92 @@ bool BZPlannerROS::calcBezierVel(geometry_msgs::Twist& cmd_vel, std::vector<geom
     if (dyaw < -M_PI) 
         dyaw += M_PI*2;
     cmd_vel.linear.x = (b.pr_len > 0 ? 1 : -1);
-    cmd_vel.angular.z = fabs(cmd_vel.linear.x / dxy) * dyaw * angular_ratio_;
-    double cmd_vel_factor = (1 / sqrt(pow(cmd_vel.linear.x, 2) + pow(cmd_vel.angular.z * wheel_base_, 2)));
-    cout << "cmd_vel_factor1: " << cmd_vel_factor << endl;
-    cmd_vel_factor *= fmin(vel_ratio_ * fmax(fabs(b.px_len) - x_offset_pos_, 0) + min_vel_x_, max_vel_x_);
-    cout << "cmd_vel_factor2: " << cmd_vel_factor << endl;
-    //add by wangcaijie start
-    static double distance_start_to_goal = 0.0;
-    double distance_current_to_goal_fabs = fabs( goal.pose.position.x - start.pose.position.x );
-    if ( !get_distance_start_to_goal_ )
+
+    if ( !magnetic_mode_ )
     {
-        distance_start_to_goal = distance_current_to_goal_fabs;
-        get_distance_start_to_goal_ = true;
+        cmd_vel.angular.z = fabs(cmd_vel.linear.x / dxy) * dyaw * angular_ratio_;
+        double cmd_vel_factor = (1 / sqrt(pow(cmd_vel.linear.x, 2) + pow(cmd_vel.angular.z * wheel_base_, 2)));
+        cmd_vel_factor *= fmin(vel_ratio_ * fmax(fabs(b.px_len) - x_offset_pos_, 0) + min_vel_x_, max_vel_x_);
+        cmd_vel.linear.x *= cmd_vel_factor;
+        cmd_vel.angular.z *= cmd_vel_factor;
     }
-    std::cout << "distance_start_to_goal: " << distance_start_to_goal << "  distance_current_to_goal_fabs: " << distance_current_to_goal_fabs << std::endl;
-    double linear_x = 0.0;
-    double temp1 = distance_start_to_goal - distance_x_acc_;
-    double temp2 = distance_start_to_goal - 2*distance_x_acc_;
-    cout << "temp1: " << temp1 << "  temp2: " << temp2 << endl;
-    if ( temp2 > 0 )
+    else //add by wangcaijie start
     {
-        if ( distance_current_to_goal_fabs >= temp1 )
+        if ( magnetic_detected_ )
         {
-            linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs-temp2,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs-temp2)/distance_x_acc_;
-            cout << "1-1 linear_x: " << linear_x << endl;
-        }
-        else if ( distance_current_to_goal_fabs > distance_x_acc_ && distance_current_to_goal_fabs < temp1 )
-        {
-            linear_x = max_vel_x_;
-            cout << "1-2 linear_x: " << linear_x << endl;
-        }
-        else //distance_current_to_goal_fabs < distance_x_acc_
-        {
-            linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs)/distance_x_acc_;
-            cout << "1-3 linear_x: " << linear_x << endl;
-        }
-    }
-    else //temp2 < 0
-    {
-        if ( distance_current_to_goal_fabs > 0.5*distance_start_to_goal )
-        {
-            linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs-temp2,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs-temp2)/distance_x_acc_;
-            cout << "2-1 linear_x: " << linear_x << endl;
+            static double distance_start_to_goal = 0.0;
+            double distance_current_to_goal_fabs = fabs( goal.pose.position.x - start.pose.position.x );
+            if ( !get_distance_start_to_goal_ )
+            {
+                distance_start_to_goal = distance_current_to_goal_fabs;
+                get_distance_start_to_goal_ = true;
+            }
+            //std::cout << "distance_start_to_goal: " << distance_start_to_goal << "  distance_current_to_goal_fabs: " << distance_current_to_goal_fabs << std::endl;
+            double linear_x = 0.0;
+            double temp1 = distance_start_to_goal - distance_x_acc_;
+            double temp2 = distance_start_to_goal - 2*distance_x_acc_;
+            if ( temp2 > 0 )
+            {
+                if ( distance_current_to_goal_fabs >= temp1 )
+                {
+                    linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs-temp2,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs-temp2)/distance_x_acc_;
+                    if ( fabs(linear_x) < min_vel_x_ )
+                    {
+                        linear_x = min_vel_x_;
+                    }
+                }
+                else if ( distance_current_to_goal_fabs > distance_x_acc_ && distance_current_to_goal_fabs < temp1 )
+                {
+                    linear_x = max_vel_x_;
+                }
+                else //distance_current_to_goal_fabs < distance_x_acc_
+                {
+                    linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs)/distance_x_acc_;
+                }
+            }
+            else //temp2 < 0
+            {
+                if ( distance_current_to_goal_fabs > 0.5*distance_start_to_goal )
+                {
+                    linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs-temp2,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs-temp2)/distance_x_acc_;
+                    if ( fabs(linear_x) < min_vel_x_ )
+                    {
+                        linear_x = min_vel_x_;
+                    }
+                }
+                else
+                {
+                    linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs)/distance_x_acc_;
+                }
+            }
+
+            if ( fabs(linear_x) > max_vel_x_ )
+            {
+                linear_x = max_vel_x_;
+            }
+            else if ( fabs(linear_x) < min_stop_vel_x_ )
+            {
+                linear_x = min_stop_vel_x_;
+            }
+
+            cmd_vel.linear.x *= linear_x;
+
+            double dyaw_angle = dyaw * 180 / 3.14;
+            cmd_vel.angular.z = fabs(cmd_vel.linear.x) * dyaw_angle;
+            static double max_angular = 0.1;
+            if ( fabs(cmd_vel.angular.z) > max_angular )
+            {
+                cmd_vel.angular.z = (cmd_vel.angular.z > 0 ? 1 : -1) * max_angular;
+            }
+            //cout << "dyaw_angle: " << dyaw_angle << "  cmd_vel.angular.z: " << cmd_vel.angular.z << endl;
         }
         else
         {
-            linear_x = - max_vel_x_*(pow(distance_current_to_goal_fabs,2))/pow(distance_x_acc_,2) + 2*max_vel_x_*(distance_current_to_goal_fabs)/distance_x_acc_;
-            cout << "2-2 linear_x: " << linear_x << endl;
+            cmd_vel.linear.x = 0.0;
+            cmd_vel.angular.z = 0.0;
         }
-    }
+    } //add by wangcaijie end
 
-    //linear_x = fmin( linear_x + min_vel_x_, max_vel_x_);
-    if ( fabs(linear_x) > max_vel_x_ )
-    {
-        linear_x = max_vel_x_;
-    }
-    else if ( fabs(linear_x) < min_vel_x_ )
-    {
-        linear_x = min_vel_x_;
-    }
-
-    cmd_vel.linear.x *= linear_x;
-    //add by wangcaijie end
-
-    //cmd_vel.linear.x *= cmd_vel_factor;
-    cmd_vel.angular.z *= cmd_vel_factor;
     points.push_back(b.ps);
     points.push_back(b.pu);
     points.push_back(b.pv);
@@ -638,7 +660,6 @@ bool BZPlannerROS::calcBezierVel(geometry_msgs::Twist& cmd_vel, std::vector<geom
 
 bool BZPlannerROS::goalReachBZLen()
 {
-    ROS_ERROR("wang goalReachBZLen"); //add by wangcaijie
     if (fabs(current_tolerance_) < bz_length_tolerance_)
     {
         return true;
@@ -648,7 +669,6 @@ bool BZPlannerROS::goalReachBZLen()
 
 bool BZPlannerROS::goalReachXY()
 {
-    ROS_ERROR("wang goalReachXY"); //add by wangcaijie
     tf::Stamped<tf::Pose> goal_pose;
     planner_util_.getGoal(goal_pose);
     double goal_x = goal_pose.getOrigin().getX();
@@ -664,7 +684,6 @@ bool BZPlannerROS::goalReachXY()
 
 bool BZPlannerROS::goalReachEucDis()
 {
-    ROS_ERROR("wang goalReachEucDis"); //add by wangcaijie
     tf::Stamped<tf::Pose> goal_pose;
     planner_util_.getGoal(goal_pose);
     double goal_x = goal_pose.getOrigin().getX();
@@ -678,7 +697,6 @@ bool BZPlannerROS::goalReachEucDis()
 
 bool BZPlannerROS::goalReachXYYaw()
 {
-    ROS_ERROR("wang goalReachXYYaw"); //add by wangcaijie
     tf::Stamped<tf::Pose> goal_pose;
     planner_util_.getGoal(goal_pose);
     double goal_th = tf::getYaw(goal_pose.getRotation());
@@ -692,7 +710,6 @@ bool BZPlannerROS::goalReachXYYaw()
 
 bool BZPlannerROS::goalReachEucDisYaw()
 {
-    ROS_ERROR("wang goalReachEucDisYaw"); //add by wangcaijie
     tf::Stamped<tf::Pose> goal_pose;
     planner_util_.getGoal(goal_pose);
     double goal_th = tf::getYaw(goal_pose.getRotation());
@@ -704,51 +721,49 @@ bool BZPlannerROS::goalReachEucDisYaw()
     return false;
 }
 
-// bool BZPlannerROS::goalReachLocal()
-// {
-//     //ROS_ERROR("wang goalReachLocal"); //add by wangcaijie
-//     tf::Stamped<tf::Pose> goal_pose, present_pose;
-//     if(getLocalGoal(goal_pose) && getLocalPose(present_pose)){
-//         double goal_x = goal_pose.getOrigin().getX();  
-//         double goal_y = goal_pose.getOrigin().getY();
-//         double goal_th = tf::getYaw(goal_pose.getRotation());
-//         double xy_tolerance_temp = base_local_planner::getGoalPositionDistance(present_pose,goal_x,goal_y);
-//         if ( xy_tolerance_temp <= xy_tolerance_ 
-//             && base_local_planner::getGoalOrientationAngleDifference(present_pose, goal_th) <= yaw_tolerance_)
-//         {
-//             return true;
-//         }
-//     }
-//     return false;
-// }
+ bool BZPlannerROS::goalReachLocal()
+ {
+     tf::Stamped<tf::Pose> goal_pose, present_pose;
+     if(getLocalGoal(goal_pose) && getLocalPose(present_pose)){
+         double goal_x = goal_pose.getOrigin().getX();  
+         double goal_y = goal_pose.getOrigin().getY();
+         double goal_th = tf::getYaw(goal_pose.getRotation());
+         double xy_tolerance_temp = base_local_planner::getGoalPositionDistance(present_pose,goal_x,goal_y);
+         double yaw_tolerance_temp = base_local_planner::getGoalOrientationAngleDifference(present_pose, goal_th);
+         cout << "xy_tolerance_temp: " << xy_tolerance_temp << "  yaw_tolerance_temp: " << yaw_tolerance_temp << endl;
+         if ( xy_tolerance_temp <= xy_tolerance_ && yaw_tolerance_temp <= yaw_tolerance_)
+         {
+             return true;
+         }
+     }
+     return false;
+ }
 
-bool BZPlannerROS::goalReachLocal()
-{
-    //ROS_ERROR("wang goalReachLocal"); //add by wangcaijie
-    tf::Stamped<tf::Pose> goal_pose, present_pose;
-    if(getLocalGoal(goal_pose) && getLocalPose(present_pose))
-    {
-        double goal_x = goal_pose.getOrigin().getX();
-        double goal_y = goal_pose.getOrigin().getY();
-        double goal_th = tf::getYaw(goal_pose.getRotation());
+//bool BZPlannerROS::goalReachLocal()
+//{
+//    tf::Stamped<tf::Pose> goal_pose, present_pose;
+//    if(getLocalGoal(goal_pose) && getLocalPose(present_pose))
+//    {
+//        double goal_x = goal_pose.getOrigin().getX();
+//        double goal_y = goal_pose.getOrigin().getY();
+//        double goal_th = tf::getYaw(goal_pose.getRotation());
 
-        double present_pose_temp = present_pose.getOrigin().getX();
-        double diff = fabs(goal_x-present_pose_temp);
+//        double present_pose_temp = present_pose.getOrigin().getX();
+//        double diff = fabs(goal_x-present_pose_temp);
 
-        //cout << "goal_x y theta: " << goal_x << " " << goal_y << " " << goal_th << endl;
-        double xy_tolerance_temp = base_local_planner::getGoalPositionDistance(present_pose,goal_x,goal_y);
-        cout << "diff: " << diff << "  xy_tolerance_temp: " << xy_tolerance_temp << endl;
-        if ( diff <= xy_tolerance_ )
-        {
-            return true;
-        }
-    }
-    return false;
-}
+//        //cout << "goal_x y theta: " << goal_x << " " << goal_y << " " << goal_th << endl;
+//        double xy_tolerance_temp = base_local_planner::getGoalPositionDistance(present_pose,goal_x,goal_y);
+//        cout << "diff: " << diff << "  xy_tolerance_temp: " << xy_tolerance_temp << endl;
+//        if ( diff <= xy_tolerance_ )
+//        {
+//            return true;
+//        }
+//    }
+//    return false;
+//}
 
 bool BZPlannerROS::goalReachLocalinMap()
 {
-    ROS_ERROR("wang goalReachLocalinMap"); //add by wangcaijie
     tf::Stamped<tf::Pose> goal_pose, present_pose;
         tf::poseStampedMsgToTF(goal_pose_,goal_pose);
         double goal_x = goal_pose.getOrigin().getX();  
@@ -765,7 +780,6 @@ bool BZPlannerROS::goalReachLocalinMap()
 
 bool BZPlannerROS::goalReachSum(int reach_level)
 {
-    //ROS_ERROR("wang goalReachSum"); //add by wangcaijie
     switch(motion_status_)
     {
         case RELOCATION :{

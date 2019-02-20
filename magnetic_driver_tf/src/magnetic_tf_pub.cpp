@@ -12,6 +12,7 @@ MagneticTfPub::MagneticTfPub()
     , task_switch_sub_()
     , magnetic_head_sub_()
     , magnetic_tail_sub_()
+    , magnetic_detect_status_pub_()
     , magnetic_head_pose2d_()
     , magnetic_tail_pose2d_()
     , magnetic_head_is_forward_(true)
@@ -33,12 +34,14 @@ MagneticTfPub::MagneticTfPub()
     , odometry_marker_start_()
     , odometry_marker_end_()
     , get_marker_middle_pose_(false)
-    , need_set_bzp_max_vel_x_(true)
+//    , need_set_bzp_min_vel_x_(true)
 {
     odom_sub_ = nh_.subscribe("/odom", 1, &MagneticTfPub::OdomCallback, this);
     task_switch_sub_ = nh_.subscribe("/task_switch", 1, &MagneticTfPub::TaskSwitchCallback, this );
     magnetic_head_sub_ = nh_.subscribe("/magnetic_head_data", 1, &MagneticTfPub::MagneticHeadCallback, this);
     magnetic_tail_sub_ = nh_.subscribe("/magnetic_tail_data", 1, &MagneticTfPub::MagneticTailCallback, this);
+
+    magnetic_detect_status_pub_ = nh_.advertise<std_msgs::Bool>("/magnetic_detected", 1);
 
     ros::NodeHandle nh_p("~");
     double distance_magnetic_head_to_robot_center;
@@ -62,7 +65,8 @@ MagneticTfPub::~MagneticTfPub()
 
 void MagneticTfPub::TaskSwitchCallback(const std_msgs::HeaderPtr &task_switch_msg)
 {
-    if ( task_switch_msg->frame_id == "magnetic_tf_pub" || task_switch_msg->frame_id.empty() )
+    size_t found_node = task_switch_msg->frame_id.find("magnetic_tf_pub");
+    if ( found_node != std::string::npos || task_switch_msg->frame_id.empty() )
     {
         if ( task_switch_msg->seq == 0 )
         {
@@ -161,7 +165,7 @@ void MagneticTfPub::ResetParam()
     detected_head_marker_times_ = 0;
 
     get_marker_middle_pose_ = false;
-    need_set_bzp_max_vel_x_ = true;
+//    need_set_bzp_min_vel_x_ = true;
 }
 
 void MagneticTfPub::StopRun()
@@ -280,6 +284,13 @@ double MagneticTfPub::GetMarkerInOdometryDiff()
     return marker_in_odometry_diff;
 }
 
+void MagneticTfPub::MagneticDetectStatusPub( bool magnetic_detected )
+{
+    std_msgs::Bool magnetic_detected_msg;
+    magnetic_detected_msg.data = magnetic_detected;
+    magnetic_detect_status_pub_.publish(magnetic_detected_msg);
+}
+
 void MagneticTfPub::Run()
 {
     double magnetic_tf_theta = 0.0;
@@ -290,7 +301,9 @@ void MagneticTfPub::Run()
     int no_detected_tail_marker_times = 0;
     int no_detected_head_marker_times = 0;
 
-    ros::Rate r(100);
+    const static int rate_hz = 100;
+
+    ros::Rate r(rate_hz);
     while ( ros::ok() )
     {
         ros::spinOnce();
@@ -304,9 +317,10 @@ void MagneticTfPub::Run()
 
         if ( !head_detected_magnetic_ && !tail_detected_magnetic_ ) //前后均未检测到磁条
         {
+            MagneticDetectStatusPub(false);
             ROS_WARN("both head and tail do not detected magnetic");
             ++ no_detected_magnetic_times;
-            if ( no_detected_magnetic_times > 400 )//todo
+            if ( no_detected_magnetic_times > 5*rate_hz )
             {
                 StopRun();
             }
@@ -317,6 +331,8 @@ void MagneticTfPub::Run()
         }
         else
         {
+            MagneticDetectStatusPub(true);
+
             no_detected_magnetic_times = 0;
             int sign_by_orientation = 0;
 
@@ -410,11 +426,11 @@ void MagneticTfPub::Run()
             if ( head_or_tail_ != NON && get_marker_middle_pose_ )
             {
                 marker_in_odometry_diff = sign_by_orientation * GetMarkerInOdometryDiff();//param_test_
-                if ( need_set_bzp_max_vel_x_ )
-                {
-                    int system_rtn = system("rosrun dynamic_reconfigure dynparam set /move_base/BZPlannerROS min_vel_x 0.02");
-                    need_set_bzp_max_vel_x_ = false;
-                }
+//                if ( need_set_bzp_min_vel_x_ )
+//                {
+//                    int system_rtn = system("rosrun dynamic_reconfigure dynparam set /move_base/BZPlannerROS min_vel_x 0.02");
+//                    need_set_bzp_min_vel_x_ = false;
+//                }
             }
 
             GetMagneticPoseInRobot(magnetic_tf_x, magnetic_tf_y, magnetic_tf_theta);

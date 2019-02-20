@@ -27,9 +27,11 @@
 
 #include <json/json.h>
 
-#define BUFFERSIZE              1024
+#include <dispatch_robot_comm/logger.h>
 
+#define BUFFERSIZE              1024
 using namespace std;
+
 class Dispatch
 {
 public:
@@ -53,18 +55,10 @@ protected:
     int server_port_;
     int socket_fd_;
 
-    int task_status_;
-
-    std::vector<std::string>    m_InforList_;
-    std::string                 m_lastPlus_;
-
     int dev_id_;
-    double time_stamp_recv_sec_;
-    double time_stamp_recv_usec_;
+    long long int time_stamp_recv_sec_;
+    int time_stamp_recv_usec_;
     int dispatch_comm_id_;
-    int answer_comm_id_;
-    int agv_move_result_;
-    std::string agv_proc_state_;
     const string dispatch_trajectory_name_prefix_;
     const string dispatch_waypoint_name_prefix_;
 
@@ -79,10 +73,7 @@ protected:
 
     string comm_type_;
     string proc_name_;
-    string comm_mode_;
     string waypoint_name_trajectorie_finished_;
-
-    string str_all_;
 
     bool need_hand_shake_;
 
@@ -94,7 +85,7 @@ protected:
         IDLE,
         PUB_TRAJECTORIE_ADD,
         PUB_NAVIGATION_CONTROL,
-        WAIT_MOVE_FINISH,
+        WAIT_TASK_FINISH,
         WAIT_DISPATCH_HAND_SHAKE
     };
 
@@ -109,18 +100,19 @@ protected:
     void NavigationControlStatusCallback(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr);
 
     void TrajectorieAddPub();
-    void TrajectorieRemovePub();
+    void TrajectorieRemovePub(string trajectories_name);
     void NavigationControlPub();
     void NavigationControlPub( string trajectories_name );
 
-    void ReceiveData(char* phead, int dSize);
-    bool DeserializedJson(std::string strValue);
+    bool MsgFromDispatchParse(string str_complete);
+    void MsgFromDispatchSplicing( const string& str_recv, vector<string>& msg_complete );
+    void MsgToDispatch(string dev_type, string& msg_agv_to_dispatch);
+    void ExecuteTask();
 
     bool ChangeNavMode( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     bool ChangeNavModeExist( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void MagneticTrackLocation( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
-    bool RollerMotor( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
-    bool LocatingPin( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
+    bool MotorAction( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void TurnRound( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void OdometryGoalong( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     bool NavigationAction(yocs_msgs::Trajectory& trajectory_msg, const Json::Value& MoveData );
@@ -128,11 +120,6 @@ protected:
     void ChargeStart( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void ChargeOver( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void MagneticTest( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
-
-    void MsgAGVToDispatch(string dev_type, string& msg_agv_to_dispatch);
-    void ExecuteTask();
-
-    void ReceiveDataSplicing( const string& str_recv );
 };
 
 #endif

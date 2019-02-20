@@ -43,7 +43,8 @@ void MagneticDriverHinson::InitBufSend()
 
 void MagneticDriverHinson::TaskSwitchCallback(const std_msgs::HeaderPtr &task_switch_msg)
 {
-    if ( task_switch_msg->frame_id == "magnetic_driver_hinson" || task_switch_msg->frame_id.empty() )
+    size_t found_node = task_switch_msg->frame_id.find("magnetic_driver_hinson");
+    if ( found_node != std::string::npos || task_switch_msg->frame_id.empty() )
     {
         if ( task_switch_msg->seq == 0 )
         {

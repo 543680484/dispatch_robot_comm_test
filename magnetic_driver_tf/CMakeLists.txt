@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -std=c++11 -fPIC")
 
 ## Find catkin and any catkin packages
 find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs geometry_msgs tf genmsg dynamic_reconfigure)
-find_package(Eigen3 REQUIRED)
+#find_package(Eigen3 REQUIRED)
 
 include_directories(${catkin_INCLUDE_DIRS}
 ${EIGEN3_INCLUDE_DIRS}

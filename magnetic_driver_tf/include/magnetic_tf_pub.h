@@ -3,6 +3,7 @@
 
 #include <ros/ros.h>
 #include <std_msgs/String.h>
+#include <std_msgs/Bool.h>
 #include <std_msgs/Int32MultiArray.h>
 #include <geometry_msgs/Pose2D.h>
 #include <nav_msgs/Odometry.h>
@@ -16,7 +17,7 @@ class MagneticTfPub
     ros::Subscriber magnetic_tail_sub_;
     ros::Subscriber odom_sub_;
 
-    ros::Publisher task_finished_pub_;
+    ros::Publisher magnetic_detect_status_pub_;
 
     double fake_pose_y_out_track_cm_;
     double param_test_;
@@ -33,7 +34,7 @@ class MagneticTfPub
     bool can_detected_tail_marker_;
     bool can_detected_head_marker_;
 
-    bool need_set_bzp_max_vel_x_;
+//    bool need_set_bzp_min_vel_x_;
 
     int signal_for_head_out_track_;
     int signal_for_tail_out_track_;
@@ -67,7 +68,7 @@ class MagneticTfPub
     void MagneticTailCallback(const std_msgs::Int32MultiArrayPtr magnetic_tail_msg);
     void OdomCallback(const nav_msgs::OdometryConstPtr odometry_msg);
 
-    void CmdVelPub( double linear, double angular );
+    void MagneticDetectStatusPub( bool magnetic_detected );
     void SendTransform( double x, double y, double theta );
     void GetMagneticPoseInRobot(double& magnetic_tf_x, double& magnetic_tf_y, double& magnetic_tf_theta);
     double GetMarkerInOdometryDiff();

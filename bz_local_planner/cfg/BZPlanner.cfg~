@@ -37,7 +37,7 @@ gen.add("motion_status",       int_t, 0, "A motion status parameter which is edi
 gen.add("test_vel", 	       bool_t, 0, "To convert global plan into local plan or not", True)
 
 #add by wangcaijie start
-gen.add("magnetic_mode",       bool_t, 0, "Run in magenetic mode", True)
+gen.add("magnetic_mode", 	   bool_t, 0, "Run in magenetic mode", True)
 gen.add("distance_x_acc",      double_t, 0, "Distance acc to max_vel_x in meters", 0.6, 0)
 gen.add("min_stop_vel_x",      double_t, 0, "Min velocity for stop AGV in m/s", 0.02, 0)
 #add by wangcaijie end

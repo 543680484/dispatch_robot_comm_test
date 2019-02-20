@@ -18,6 +18,7 @@
 #include <tf/transform_listener.h>
 #include <dynamic_reconfigure/server.h>
 #include <angles/angles.h>
+#include <std_msgs/Bool.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -82,6 +83,7 @@ private:
 	bool checkQuaternionOnce(const geometry_msgs::PoseStamped& pose);
 	//listening tf 
 	bool getLocalPosebyTf(const std::string& local_frame_id, geometry_msgs::PoseStamped& local_pose_by_tf);
+    void MagneticDetectedCallback( const std_msgs::BoolPtr& msg );//add by wangcaijie
 private:
 	std::string odom_topic_;
 	std::mutex dyn_params_mutex_;
@@ -122,9 +124,15 @@ private:
 	double minimum_dist_;
 	double wheel_base_;
 	bool test_vel_;
-    double distance_x_acc_; // add by wangcaijie
 
-    bool get_distance_start_to_goal_; // add by wangcaijie
+    //add by wangcaijie start
+    ros::Subscriber magnetic_detect_status_sub_;
+    bool magnetic_detected_;
+    bool magnetic_mode_;
+    double distance_x_acc_;
+    double min_stop_vel_x_;
+    bool get_distance_start_to_goal_;
+    //add by wangcaijie end
 
 	/*
 	goal reach level:

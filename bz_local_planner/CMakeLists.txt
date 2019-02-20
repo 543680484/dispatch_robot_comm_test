@@ -16,7 +16,7 @@ find_package(catkin REQUIRED
             eigen_conversions
         )
 
-find_package(Eigen3 REQUIRED)
+#find_package(Eigen3 REQUIRED)
 remove_definitions(-DDISABLE_LIBUSB-1.0)
 include_directories(
     include
