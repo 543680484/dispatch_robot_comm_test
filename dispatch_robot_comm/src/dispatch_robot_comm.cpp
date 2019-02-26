@@ -67,7 +67,7 @@ bool Dispatch::ConnectServer (string ip_str, int port )
 
     if ( SetNonBlock ( socket_fd_, ( struct sockaddr* ) &server_addr, sizeof ( server_addr ), 0, 1000000 ) == 0 )
     {
-        LINFO( "igv connected!" );
+        LINFO( "AGV connected!" );
         return true;
     }
 
@@ -786,7 +786,6 @@ void Dispatch::ExecuteTask()
     {
         if ( !trajectory_list_msg_.trajectories.empty() )
         {
-//            cout << "trajectory_list_msg_.trajectories[0].name: " << trajectory_list_msg_.trajectories[0].name << endl;
             LINFO("trajectory_list_msg_.trajectories[0].name: ", trajectory_list_msg_.trajectories[0].name);
             task_state_ = traj_exist_in_waypoints_ ? PUB_NAVIGATION_CONTROL : PUB_TRAJECTORIE_ADD;
         }

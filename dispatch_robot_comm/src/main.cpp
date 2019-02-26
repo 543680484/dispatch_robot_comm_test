@@ -17,6 +17,8 @@ int main(int argc, char **argv)
     auto console_logger = std::make_shared<lynx::ConsoleLogger>();
     lynx::Log::Instance()->add_handle(console_logger);
     // File Logger (by open time)
+
+    system("mkdir -p dispatch_logs");
     auto file = "dispatch_logs/" + get_now_time() + ".txt";// 在~/.ros/dispatch_logs/文件夹下
     auto file_logger = std::make_shared<lynx::FileLogger>(file);
     lynx::Log::Instance()->add_handle(file_logger);
