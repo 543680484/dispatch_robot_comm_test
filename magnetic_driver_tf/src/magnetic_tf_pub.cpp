@@ -318,7 +318,7 @@ void MagneticTfPub::Run()
             MagneticDetectStatusPub(false);
             ROS_WARN("both head and tail do not detected magnetic");
             ++ no_detected_magnetic_times;
-            if ( no_detected_magnetic_times > 5*rate_hz )
+            if ( no_detected_magnetic_times > 20*rate_hz )
             {
                 StopRun();
             }
