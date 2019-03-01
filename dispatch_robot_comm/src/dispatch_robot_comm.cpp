@@ -10,7 +10,7 @@ Dispatch::Dispatch()
     ,trajectories_add_pub_()
     ,trajectories_remove_pub_()
     ,navigation_control_pub_()
-    ,task_state_(IDLE )
+    ,task_state_(IDLE)
     ,dispatch_comm_id_(0)
     ,time_stamp_recv_sec_(0)
     ,time_stamp_recv_usec_(0)
@@ -142,6 +142,7 @@ void Dispatch::NavigationControlPub()
 
     navigation_control_msg.control = yocs_msgs::NavigationControl::START;
     navigation_control_msg.goal_name = trajectory_list_msg_.trajectories[0].name;
+    LINFO("NavigationControlPub: ", trajectory_list_msg_.trajectories[0].name);
 
     navigation_control_pub_.publish(navigation_control_msg);
 }
@@ -160,6 +161,7 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
 {
     yocs_msgs::Trajectory trajectory_msg;
     trajectory_msg.name = trajectories_name;//trajectory_list_msg_.trajectories[0].name;
+    LINFO("TrajectorieRemovePub: ", trajectory_msg.name);
 
     trajectories_remove_pub_.publish(trajectory_msg);
 }
@@ -173,16 +175,16 @@ void Dispatch::NavigationControlStatusCallback(const yocs_msgs::NavigationContro
         if (comm_type_ != "MOVE")
         {
             trajectorie_finished_ = true;
-            LINFO("task trajectorie finished: %s", waypoint_name_finished.c_str());
+            LINFO("trajectorie finished_PROC: ", waypoint_name_finished.c_str());
         }
         else if ( waypoint_name_finished == trajectory_list_msg_.trajectories[0].waypoints[0].name )
         {
             trajectorie_finished_ = true;
-            LINFO("task trajectorie finished: %s", waypoint_name_finished.c_str());
+            LINFO("trajectorie finished_MOVE: ", waypoint_name_finished.c_str());
         }
         else
         {
-            LWARN("task trajectorie finished not current: %s", waypoint_name_finished.c_str());
+            LWARN("trajectorie finished_not_current: ", waypoint_name_finished.c_str());
         }
     }
 }
@@ -302,7 +304,7 @@ bool Dispatch::ChangeNavModeExist(yocs_msgs::Trajectory& trajectory_msg, const J
     }
     else
     {
-        LERROR("undefined nav mode: %s", nav_mode.c_str());
+        LERROR("undefined nav mode: ", nav_mode.c_str());
         return false;
     }
 
@@ -351,7 +353,7 @@ bool Dispatch::ChangeNavMode(yocs_msgs::Trajectory& trajectory_msg, const Json::
     }
     else
     {
-        LERROR("undefined nav mode: %s", nav_mode.c_str());
+        LERROR("undefined nav mode: ", nav_mode.c_str());
         return false;
     }
 
@@ -458,7 +460,7 @@ bool Dispatch::MotorAction( yocs_msgs::Trajectory& trajectory_msg, const Json::V
         }
         else
         {
-            LERROR("undefined mode: %s", motor_action.c_str());
+            LERROR("undefined mode: ", motor_action.c_str());
             return false;
         }
     }
@@ -476,7 +478,7 @@ bool Dispatch::MotorAction( yocs_msgs::Trajectory& trajectory_msg, const Json::V
         }
         else
         {
-            LERROR("undefined mode: %s", motor_action.c_str());
+            LERROR("undefined mode: ", motor_action.c_str());
             return false;
         }
     }
@@ -494,13 +496,13 @@ bool Dispatch::MotorAction( yocs_msgs::Trajectory& trajectory_msg, const Json::V
         }
         else
         {
-            LERROR("undefined mode: %s", motor_action.c_str());
+            LERROR("undefined mode: ", motor_action.c_str());
             return false;
         }
     }
     else
     {
-        LERROR("undefined nav mode: %s", motor_num.c_str());
+        LERROR("undefined nav mode: ", motor_num.c_str());
         return false;
     }
 
@@ -602,7 +604,11 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
 
         if ( comm_type == "MOVE" && comm_type_ == "MOVE" )
         {
-            get_new_move_ = true;
+            if ( IDLE != task_state_ )
+            {
+                get_new_move_ = true;
+                LINFO("get_new_move_ = true");
+            }
         }
 
         comm_type_ = comm_type;
@@ -688,7 +694,7 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
             }
             else
             {
-                LERROR("undefined proc name: %s", proc_name_.c_str());
+                LERROR("undefined proc name: ", proc_name_.c_str());
                 return false;
             }
         }
@@ -699,7 +705,7 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
         }
         else
         {
-            LERROR("undefined comm type: %s", comm_type_.c_str());
+            LERROR("undefined comm type: ", comm_type_.c_str());
             return false;
         }
 
@@ -786,12 +792,13 @@ void Dispatch::ExecuteTask()
     {
         if ( !trajectory_list_msg_.trajectories.empty() )
         {
-            LINFO("trajectory_list_msg_.trajectories[0].name: ", trajectory_list_msg_.trajectories[0].name);
+            LINFO("start task: ", trajectory_list_msg_.trajectories[0].name);
             task_state_ = traj_exist_in_waypoints_ ? PUB_NAVIGATION_CONTROL : PUB_TRAJECTORIE_ADD;
         }
-        if ( !trajectories_to_remove.empty() )
+        if ( !trajectories_to_remove.empty() && (ros::Time::now() - trajectories_add_time > ros::Duration(15.0)))
         {
             TrajectorieRemovePub(trajectories_to_remove[0]);
+            LINFO("trajectories_to_remove.erase: ", trajectories_to_remove[0]);
             trajectories_to_remove.erase(trajectories_to_remove.begin());
         }
     }
@@ -813,13 +820,15 @@ void Dispatch::ExecuteTask()
     {
         if ( trajectorie_finished_ || get_new_move_ )
         {
+            LINFO("get_new_move_: ", get_new_move_);
             if ( !traj_exist_in_waypoints_ )
             {
                 trajectories_to_remove.push_back(trajectory_list_msg_.trajectories[0].name);
+                LINFO("trajectories_to_remove.push_back: ", trajectory_list_msg_.trajectories[0].name);
             }
 
+            LINFO("trajectory_list_msg_.trajectories.erase: ", trajectory_list_msg_.trajectories[0].name);
             trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
-            LINFO("state machine trajectorie finished: %d", dispatch_comm_id_);
 
             if (trajectorie_finished_)
             {
@@ -833,13 +842,15 @@ void Dispatch::ExecuteTask()
 
             traj_exist_in_waypoints_ = false;
             get_new_move_ = false;
+            LINFO("get_new_move_ = false");
         }
     }
     else if ( task_state_ == WAIT_DISPATCH_HAND_SHAKE )
     {
-        if ( get_hand_shake_from_dispatch_ )
+        if ( get_hand_shake_from_dispatch_ || get_new_move_ )
         {
             task_state_ = IDLE;
+            LINFO("get_hand_shake_from_dispatch_: ", get_hand_shake_from_dispatch_);
             get_hand_shake_from_dispatch_ = false;
         }
         else
@@ -848,6 +859,7 @@ void Dispatch::ExecuteTask()
             {
                 trajectorie_finished_ = true;//重发
                 task_finish_time = ros::Time::now();
+                LINFO("resend trajectorie finished to dispatch");
             }
         }
     }
@@ -863,7 +875,7 @@ void Dispatch::Run()
     bool connect_state = false;
     vector<string> msg_complete_vector;
 
-    ros::Rate loop_rate(5);
+    ros::Rate loop_rate(10);
 
     while (ros::ok())
     {
@@ -880,9 +892,9 @@ void Dispatch::Run()
             }
             else
             {
-                LERROR("setup connect to server failed! will retry in 1s");
+                LERROR("setup connect to server failed! will retry in 2s");
                 close(socket_fd_);
-                ros::Duration ( 1.0 ).sleep();
+                ros::Duration ( 2.0 ).sleep();
                 continue;
             }
         }
