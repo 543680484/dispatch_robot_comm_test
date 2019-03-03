@@ -168,7 +168,7 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
 
 void Dispatch::NavigationControlStatusCallback(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr)
 {
-    string waypoint_name_finished = navigation_control_msg_ptr->waypoint_name;
+    string waypoint_name_finished;// = navigation_control_msg_ptr->waypoint_name;
 
     if ( navigation_control_msg_ptr->status == yocs_msgs::NavigationControlStatus::COMPLETED )
     {
@@ -607,7 +607,7 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
             if ( IDLE != task_state_ )
             {
                 get_new_move_ = true;
-                LINFO("get_new_move_ = true");
+                LINFO("get_new_move_ = true， task_state_ is: ", task_state_);
             }
         }
 
@@ -794,6 +794,7 @@ void Dispatch::ExecuteTask()
         {
             LINFO("start task: ", trajectory_list_msg_.trajectories[0].name);
             task_state_ = traj_exist_in_waypoints_ ? PUB_NAVIGATION_CONTROL : PUB_TRAJECTORIE_ADD;
+            get_new_move_ = false;
         }
         if ( !trajectories_to_remove.empty() && (ros::Time::now() - trajectories_add_time > ros::Duration(15.0)))
         {
@@ -869,6 +870,40 @@ void Dispatch::ExecuteTask()
     }
 }
 
+int Dispatch::AGVWrite(int fd, const char *buffer,int length)
+{
+    int bytes_left;
+    int written_bytes;
+    const char *ptr;
+
+    ptr=buffer;
+    bytes_left=length;
+    while(bytes_left>0)
+    {
+        written_bytes=write(fd,ptr,bytes_left);
+        if(written_bytes<=0)
+        {
+            if(errno==EINTR)
+            {
+                written_bytes=0;
+                LWARN("INTERRUPT ERROR!!!");
+            }
+            else if (errno==EAGAIN || errno==EWOULDBLOCK)
+            {
+                LWARN("EAGAIN or EWOULDBLOCK ERROR!!!");
+                return (0);
+            }
+            else
+            {
+                return(-1);
+            }
+        }
+        bytes_left-=written_bytes;
+        ptr+=written_bytes;
+    }
+    return(0);
+}
+
 void Dispatch::Run()
 {
     char buffer[BUFFERSIZE];
@@ -938,7 +973,8 @@ void Dispatch::Run()
         string msg_agv_to_dispatch;
         MsgToDispatch("AGV", msg_agv_to_dispatch);
 
-        int write_length = write(socket_fd_, msg_agv_to_dispatch.c_str(), msg_agv_to_dispatch.size());
+        //int write_length = write(socket_fd_, msg_agv_to_dispatch.c_str(), msg_agv_to_dispatch.size());
+        int write_length = AGVWrite(socket_fd_, msg_agv_to_dispatch.c_str(), msg_agv_to_dispatch.size());
 
         if (write_length < 0)
         {

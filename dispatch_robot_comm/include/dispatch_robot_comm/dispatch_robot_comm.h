@@ -94,6 +94,7 @@ protected:
     bool ConnectServer(string ip_str, int port );
     int SetNonBlock ( const int sockfd, const struct sockaddr* serv_addr,
                       const socklen_t socklen, const int nsec, const int usec );
+    int AGVWrite(int fd, const char *buffer,int length);
 
     void RobotPoseCallBack(const geometry_msgs::PoseConstPtr &robot_pose_msg);
     void BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg);
