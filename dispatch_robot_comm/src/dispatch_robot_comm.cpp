@@ -168,7 +168,7 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
 
 void Dispatch::NavigationControlStatusCallback(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr)
 {
-    string waypoint_name_finished;// = navigation_control_msg_ptr->waypoint_name;
+    string waypoint_name_finished = navigation_control_msg_ptr->waypoint_name;
 
     if ( navigation_control_msg_ptr->status == yocs_msgs::NavigationControlStatus::COMPLETED )
     {
