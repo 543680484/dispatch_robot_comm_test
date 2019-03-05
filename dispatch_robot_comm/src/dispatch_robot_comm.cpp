@@ -27,6 +27,7 @@ Dispatch::Dispatch()
     ,proc_name_()
     ,agv_pose2d_()
     ,get_new_move_(false)
+    ,battery_percentage_(1.0)
     ,waypoint_name_trajectorie_finished_("")
 {
     robot_pose_sub_ = nh_.subscribe("/robot_pose", 1, &Dispatch::RobotPoseCallBack, this );
