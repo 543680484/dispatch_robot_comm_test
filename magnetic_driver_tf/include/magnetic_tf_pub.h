@@ -19,7 +19,6 @@ class MagneticTfPub
 
     ros::Publisher magnetic_detect_status_pub_;
 
-    double fake_pose_y_out_track_cm_;
     double param_test_;
 
     bool magnetic_head_is_forward_;
@@ -34,8 +33,6 @@ class MagneticTfPub
     bool can_detected_tail_marker_;
     bool can_detected_head_marker_;
 
-    int signal_for_head_out_track_;
-    int signal_for_tail_out_track_;
     int detected_tail_marker_times_;
     int detected_head_marker_times_;
 
@@ -71,7 +68,7 @@ class MagneticTfPub
     void GetMagneticPoseInRobot(double& magnetic_tf_x, double& magnetic_tf_y, double& magnetic_tf_theta);
     double GetMarkerInOdometryDiff();
 
-    double GetPoseYInRobotBase(bool magnetic_is_forward, const std_msgs::Int32MultiArrayPtr magnetic_tail_msg, int get_signal, int& num_detected_magnetic);
+    double GetPoseYInRobotBase(bool magnetic_is_forward, const std_msgs::Int32MultiArrayPtr magnetic_tail_msg, int& num_detected_magnetic);
     double FakeYForControl(double magnetic_y_cm);
     void ResetParam();
     void StopRun();

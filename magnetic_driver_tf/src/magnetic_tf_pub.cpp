@@ -29,8 +29,6 @@ MagneticTfPub::MagneticTfPub()
     , need_recod_marker_pose_in_odom_(true)
     , head_detected_magnetic_(false)
     , tail_detected_magnetic_(false)
-    , signal_for_head_out_track_(0)
-    , signal_for_tail_out_track_(0)
     , odometry_marker_start_()
     , odometry_marker_end_()
     , get_marker_middle_pose_(false)
@@ -51,7 +49,6 @@ MagneticTfPub::MagneticTfPub()
     nh_p.param("distance_magnetic_head_to_robot_center", distance_magnetic_head_to_robot_center, 0.27);
     nh_p.param("distance_magnetic_tail_to_robot_center", distance_magnetic_tail_to_robot_center, 0.27);
     nh_p.param("points_num_consider_detected_magnetic_marker", points_num_consider_detected_magnetic_marker_, 8);
-    nh_p.param("fake_pose_y_out_track_cm", fake_pose_y_out_track_cm_, 5.0);
     nh_p.param("param_test", param_test_, 1.0);
     nh_p.param("output_odometry_from_marker", output_odometry_from_marker_, false);
 
@@ -85,7 +82,7 @@ void MagneticTfPub::MagneticHeadCallback(const std_msgs::Int32MultiArrayPtr magn
 {
     int num_detected_magnetic = 0;
 
-    magnetic_head_pose2d_.y = GetPoseYInRobotBase(magnetic_head_is_forward_, magnetic_head_msg, signal_for_head_out_track_, num_detected_magnetic);
+    magnetic_head_pose2d_.y = GetPoseYInRobotBase(magnetic_head_is_forward_, magnetic_head_msg, num_detected_magnetic);
 
     if ( num_detected_magnetic == 0 ) //未检测到磁条
     {
@@ -94,7 +91,6 @@ void MagneticTfPub::MagneticHeadCallback(const std_msgs::Int32MultiArrayPtr magn
     else //检测到磁条
     {
         head_detected_magnetic_ = true;
-        signal_for_head_out_track_ = SIGN(magnetic_head_pose2d_.y);
 
         if ( num_detected_magnetic > points_num_consider_detected_magnetic_marker_ )
         {
@@ -115,7 +111,7 @@ void MagneticTfPub::MagneticTailCallback(const std_msgs::Int32MultiArrayPtr magn
 {
     int num_detected_magnetic = 0;
 
-    magnetic_tail_pose2d_.y = GetPoseYInRobotBase(magnetic_tail_is_forward_, magnetic_tail_msg, signal_for_tail_out_track_, num_detected_magnetic);
+    magnetic_tail_pose2d_.y = GetPoseYInRobotBase(magnetic_tail_is_forward_, magnetic_tail_msg, num_detected_magnetic);
 
     if ( num_detected_magnetic == 0 ) //未检测到磁条
     {
@@ -124,7 +120,6 @@ void MagneticTfPub::MagneticTailCallback(const std_msgs::Int32MultiArrayPtr magn
     else //检测到磁条
     {
         tail_detected_magnetic_ = true;
-        signal_for_tail_out_track_ = SIGN(magnetic_tail_pose2d_.y);
 
         if ( num_detected_magnetic > points_num_consider_detected_magnetic_marker_ )
         {
@@ -157,9 +152,6 @@ void MagneticTfPub::ResetParam()
     count_detected_tail_marker_ = true;
     count_detected_head_marker_ = true;
 
-    signal_for_head_out_track_ = 0;
-    signal_for_tail_out_track_ = 0;
-
     detected_tail_marker_times_ = 0;
     detected_head_marker_times_ = 0;
 
@@ -173,7 +165,7 @@ void MagneticTfPub::StopRun()
     ResetParam();
 }
 
-double MagneticTfPub::GetPoseYInRobotBase(bool magnetic_is_forward, const std_msgs::Int32MultiArrayPtr magnetic_msg, int get_signal, int& num_detected_magnetic)
+double MagneticTfPub::GetPoseYInRobotBase(bool magnetic_is_forward, const std_msgs::Int32MultiArrayPtr magnetic_msg, int& num_detected_magnetic)
 {
     double pose_y_sum = 0.0;
 
@@ -201,18 +193,14 @@ double MagneticTfPub::GetPoseYInRobotBase(bool magnetic_is_forward, const std_ms
     }
 
     double pose_y_cm = 0.0;
-    // static int get_signal = 0;
 
     if ( num_detected_magnetic == 0 ) //未检测到磁条
     {
-        // pose_y_cm = get_signal * fake_pose_y_out_track_cm_;
         pose_y_cm = 0.0;
     }
     else //检测到磁条
     {
         pose_y_cm = (pose_y_sum / num_detected_magnetic);
-
-        // get_signal = SIGN(pose_y_cm);
     }
 
     return pose_y_cm * 0.01; //from cm to m

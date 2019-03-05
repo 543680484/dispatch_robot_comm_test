@@ -26,7 +26,6 @@
     <param name="distance_magnetic_head_to_robot_center"        value="0.441"   type="double"/>
     <param name="distance_magnetic_tail_to_robot_center"        value="0.441"   type="double"/>
     <param name="points_num_consider_detected_magnetic_marker"  value="8"       type="int"/>
-    <param name="fake_pose_y_out_track_cm"                      value="8.5"     type="double"/>
     <param name="output_odometry_from_marker"                   value="false"   type="bool"/>
 
   </node>
