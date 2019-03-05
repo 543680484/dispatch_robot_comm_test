@@ -160,7 +160,7 @@ void Dispatch::NavigationControlPub( string trajectories_name )
 void Dispatch::TrajectorieRemovePub(string trajectories_name)
 {
     yocs_msgs::Trajectory trajectory_msg;
-    trajectory_msg.name = trajectories_name;//trajectory_list_msg_.trajectories[0].name;
+    trajectory_msg.name = trajectories_name;
     LINFO("TrajectorieRemovePub: ", trajectory_msg.name);
 
     trajectories_remove_pub_.publish(trajectory_msg);
@@ -881,7 +881,11 @@ int Dispatch::AGVWrite(int fd, const char *buffer,int length)
     while(bytes_left>0)
     {
         written_bytes=write(fd,ptr,bytes_left);
-        if(written_bytes<=0)
+        if(written_bytes==0)
+        {
+            return -1;
+        }
+        else if (written_bytes<0)
         {
             if(errno==EINTR)
             {
