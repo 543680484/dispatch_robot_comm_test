@@ -182,7 +182,7 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
 
 void Dispatch::NavigationControlStatusCallBack(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr)
 {
-    string waypoint_name_finished;// = navigation_control_msg_ptr->waypoint_name;
+    string waypoint_name_finished = navigation_control_msg_ptr->waypoint_name;
 
     if ( navigation_control_msg_ptr->status == yocs_msgs::NavigationControlStatus::COMPLETED )
     {
@@ -599,8 +599,6 @@ void Dispatch::OdometryGoalong( yocs_msgs::Trajectory& trajectory_msg, const Jso
     trajectory_msg.waypoints[0].pose.orientation.w = 1;
 }
 
-//正常取消和异常取消
-//agv自己取消及返回
 void Dispatch::DispatchCancelTask()
 {
     recv_dispatch_cancel_task_ = true;
