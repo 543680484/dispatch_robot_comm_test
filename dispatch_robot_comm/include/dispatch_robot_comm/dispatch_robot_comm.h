@@ -46,6 +46,7 @@ protected:
     ros::Subscriber robot_pose_sub_;
     ros::Subscriber battery_sub_;
     ros::Subscriber navigation_control_status_sub_;
+    ros::Subscriber navigation_control_sub_;
 
     ros::Publisher trajectories_add_pub_;
     ros::Publisher trajectories_remove_pub_;
@@ -70,6 +71,7 @@ protected:
     bool first_magnetic_nav_point_;
     bool get_new_move_;
     bool get_hand_shake_from_dispatch_;
+    bool recv_dispatch_cancel_task_;
 
     string comm_type_;
     string proc_name_;
@@ -98,12 +100,14 @@ protected:
 
     void RobotPoseCallBack(const geometry_msgs::PoseConstPtr &robot_pose_msg);
     void BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg);
-    void NavigationControlStatusCallback(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr);
+    void NavigationControlStatusCallBack(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr);
+    void AgvCancelTaskCallBack(const yocs_msgs::NavigationControlConstPtr &navigation_control_msg);
 
     void TrajectorieAddPub();
     void TrajectorieRemovePub(string trajectories_name);
     void NavigationControlPub();
     void NavigationControlPub( string trajectories_name );
+    void NavigationControlPubDispatchCancel();
 
     bool MsgFromDispatchParse(string str_complete);
     void MsgFromDispatchSplicing( const string& str_recv, vector<string>& msg_complete );
@@ -121,6 +125,8 @@ protected:
     void ChargeStart( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void ChargeOver( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
     void MagneticTest( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData );
+    void DispatchCancelTask();
+    void ResetTask();
 };
 
 #endif

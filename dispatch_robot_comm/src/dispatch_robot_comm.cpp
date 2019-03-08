@@ -7,6 +7,7 @@ Dispatch::Dispatch()
     :nh_()
     ,robot_pose_sub_()
     ,navigation_control_status_sub_()
+    ,navigation_control_sub_()
     ,trajectories_add_pub_()
     ,trajectories_remove_pub_()
     ,navigation_control_pub_()
@@ -24,15 +25,17 @@ Dispatch::Dispatch()
     ,trajectory_list_msg_()
     ,traj_exist_in_waypoints_(false)
     ,first_magnetic_nav_point_(true)
+    ,recv_dispatch_cancel_task_(false)
     ,proc_name_()
     ,agv_pose2d_()
     ,get_new_move_(false)
     ,battery_percentage_(1.0)
     ,waypoint_name_trajectorie_finished_("")
 {
-    robot_pose_sub_ = nh_.subscribe("/robot_pose", 1, &Dispatch::RobotPoseCallBack, this );
-    battery_sub_ = nh_.subscribe("/battery", 1, &Dispatch::BatteryCallBack, this );
-    navigation_control_status_sub_ = nh_.subscribe("/nav_ctrl_status", 3, &Dispatch::NavigationControlStatusCallback, this );
+    robot_pose_sub_ = nh_.subscribe("/robot_pose", 1, &Dispatch::RobotPoseCallBack, this);
+    battery_sub_ = nh_.subscribe("/battery", 1, &Dispatch::BatteryCallBack, this);
+    navigation_control_status_sub_ = nh_.subscribe("/nav_ctrl_status", 3, &Dispatch::NavigationControlStatusCallBack, this);
+    navigation_control_sub_ = nh_.subscribe("/nav_ctrl", 2 ,&Dispatch::AgvCancelTaskCallBack, this);
 
     trajectories_add_pub_ = nh_.advertise<yocs_msgs::Trajectory>("/trajectory_add",1);
     trajectories_remove_pub_ = nh_.advertise<yocs_msgs::Trajectory>("/trajectory_remove",1);
@@ -148,6 +151,16 @@ void Dispatch::NavigationControlPub()
     navigation_control_pub_.publish(navigation_control_msg);
 }
 
+void Dispatch::NavigationControlPubDispatchCancel()
+{
+    yocs_msgs::NavigationControl navigation_control_msg;
+
+    navigation_control_msg.control = yocs_msgs::NavigationControl::STOP;
+    LINFO("NavigationControlPubDispatchCancel");
+
+    navigation_control_pub_.publish(navigation_control_msg);
+}
+
 void Dispatch::NavigationControlPub( string trajectories_name )
 {
     yocs_msgs::NavigationControl navigation_control_msg;
@@ -167,9 +180,9 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
     trajectories_remove_pub_.publish(trajectory_msg);
 }
 
-void Dispatch::NavigationControlStatusCallback(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr)
+void Dispatch::NavigationControlStatusCallBack(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr)
 {
-    string waypoint_name_finished = navigation_control_msg_ptr->waypoint_name;
+    string waypoint_name_finished;// = navigation_control_msg_ptr->waypoint_name;
 
     if ( navigation_control_msg_ptr->status == yocs_msgs::NavigationControlStatus::COMPLETED )
     {
@@ -188,6 +201,14 @@ void Dispatch::NavigationControlStatusCallback(const yocs_msgs::NavigationContro
             LWARN("trajectorie finished_not_current: ", waypoint_name_finished.c_str());
         }
     }
+    else if ( navigation_control_msg_ptr->status == yocs_msgs::NavigationControlStatus::CANCELLED )
+    {
+        if ( "CANCEL_CURCMD" == proc_name_ )
+        {
+            trajectorie_finished_ = true;
+            LWARN("trajectorie finished for dispatch cancel");
+        }
+    }
 }
 
 void Dispatch::RobotPoseCallBack(const geometry_msgs::PoseConstPtr &robot_pose_msg)
@@ -200,6 +221,34 @@ void Dispatch::RobotPoseCallBack(const geometry_msgs::PoseConstPtr &robot_pose_m
 void Dispatch::BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg)
 {
     battery_percentage_ = battery_msg->percentage;
+}
+
+void Dispatch::AgvCancelTaskCallBack(const yocs_msgs::NavigationControlConstPtr &navigation_control_msg)
+{
+    if ( 0 == navigation_control_msg->control )
+    {
+        if ( "CANCEL_CURCMD" == proc_name_ )
+        {
+            LINFO("dispatch cancel task");
+        }
+        else
+        {
+            LINFO("agv self cancel task");
+            ResetTask();
+        }
+    }
+}
+
+void Dispatch::ResetTask()
+{
+    LINFO("reset task");
+    task_state_ = IDLE;
+    trajectorie_finished_ = false;
+    get_hand_shake_from_dispatch_ = false;
+    trajectory_list_msg_.trajectories.clear();
+    traj_exist_in_waypoints_ = false;
+    get_new_move_ = false;
+    waypoint_name_trajectorie_finished_.clear();
 }
 
 bool Dispatch::NavigationAction(yocs_msgs::Trajectory& trajectory_msg, const Json::Value& MoveData )
@@ -434,7 +483,6 @@ void Dispatch::MagneticTrackLocation( yocs_msgs::Trajectory& trajectory_msg, con
     trajectory_msg.waypoints[0].pose.position.x = current_offset + back_offset;
     trajectory_msg.waypoints[0].pose.position.y = 0;
     trajectory_msg.waypoints[0].pose.position.z = 0;
-//    cout << "MAGNETICTRACK_LOCATION x: " << trajectory_msg.waypoints[0].pose.position.x << endl;
     LINFO("MAGNETICTRACK_LOCATION x: ", trajectory_msg.waypoints[0].pose.position.x);
 
     trajectory_msg.waypoints[0].pose.orientation.x = 0;
@@ -549,6 +597,13 @@ void Dispatch::OdometryGoalong( yocs_msgs::Trajectory& trajectory_msg, const Jso
     trajectory_msg.waypoints[0].pose.orientation.y = 0;
     trajectory_msg.waypoints[0].pose.orientation.z = 0;
     trajectory_msg.waypoints[0].pose.orientation.w = 1;
+}
+
+//正常取消和异常取消
+//agv自己取消及返回
+void Dispatch::DispatchCancelTask()
+{
+    recv_dispatch_cancel_task_ = true;
 }
 
 void Dispatch::ChargeStart( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData )
@@ -668,7 +723,6 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
                     return false;
                 }
             }
-
             else if ( proc_name_ == "TURNROUND" )
             {
                 TurnRound(trajectory_msg, procData);
@@ -685,9 +739,11 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
             {
                 ChargeOver(trajectory_msg, procData);
             }
-            else if ( proc_name_ == "CANCEL_COMMAND" )
+            else if ( proc_name_ == "CANCEL_CURCMD" )
             {
-                //todo
+                LINFO("recv dispatch cancel task");
+                DispatchCancelTask();
+                return false;
             }
             else if ( "TEST" == proc_name_ )
             {
@@ -769,6 +825,7 @@ void Dispatch::MsgToDispatch(string dev_type, string& msg_agv_to_dispatch)
             AGVInfor["FB_PROC"] = AGVProc;
         }
         need_hand_shake_ = false;
+        LINFO("hand shake to dispatch");
     }
     else
     {
@@ -788,6 +845,26 @@ void Dispatch::ExecuteTask()
     static ros::Time trajectories_add_time;
     static ros::Time task_finish_time;
     static vector<string> trajectories_to_remove;
+
+    if ( recv_dispatch_cancel_task_ )
+    {
+        LINFO("start pub cancel task");
+        recv_dispatch_cancel_task_ = false;
+
+        NavigationControlPubDispatchCancel();
+        if ( IDLE == task_state_ )//当前无任务执行
+        {
+            LINFO("task_state_ is idle");
+            trajectorie_finished_ = true;
+            task_state_ = WAIT_DISPATCH_HAND_SHAKE;
+        }
+        else//当前有任务执行
+        {
+            LINFO("task_state_ is: ", task_state_);
+            task_state_ = WAIT_TASK_FINISH;
+        }
+        return;
+    }
 
     if ( task_state_ == IDLE )
     {
@@ -820,31 +897,43 @@ void Dispatch::ExecuteTask()
     }
     else if ( task_state_ == WAIT_TASK_FINISH )
     {
-        if ( trajectorie_finished_ || get_new_move_ )
+        if ( comm_type_ == "PROC" && "CANCEL_CURCMD" == proc_name_ )
         {
-            LINFO("get_new_move_: ", get_new_move_);
-            if ( !traj_exist_in_waypoints_ )
-            {
-                trajectories_to_remove.push_back(trajectory_list_msg_.trajectories[0].name);
-                LINFO("trajectories_to_remove.push_back: ", trajectory_list_msg_.trajectories[0].name);
-            }
-
-            LINFO("trajectory_list_msg_.trajectories.erase: ", trajectory_list_msg_.trajectories[0].name);
-            trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
-
             if (trajectorie_finished_)
             {
                 task_state_ = WAIT_DISPATCH_HAND_SHAKE;
                 task_finish_time = ros::Time::now();
             }
-            else
+        }
+        else
+        {
+            if ( trajectorie_finished_ || get_new_move_ )
             {
-                task_state_ = IDLE;
-            }
+                LINFO("get_new_move_: ", get_new_move_);
 
-            traj_exist_in_waypoints_ = false;
-            get_new_move_ = false;
-            LINFO("get_new_move_ = false");
+                if ( !traj_exist_in_waypoints_ )
+                {
+                    trajectories_to_remove.push_back(trajectory_list_msg_.trajectories[0].name);
+                    LINFO("trajectories_to_remove.push_back: ", trajectory_list_msg_.trajectories[0].name);
+                }
+
+                LINFO("trajectory_list_msg_.trajectories.erase: ", trajectory_list_msg_.trajectories[0].name);
+                trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
+
+                if (trajectorie_finished_)
+                {
+                    task_state_ = WAIT_DISPATCH_HAND_SHAKE;
+                    task_finish_time = ros::Time::now();
+                }
+                else
+                {
+                    task_state_ = IDLE;
+                }
+
+                traj_exist_in_waypoints_ = false;
+                get_new_move_ = false;
+                LINFO("get_new_move_ = false");
+            }
         }
     }
     else if ( task_state_ == WAIT_DISPATCH_HAND_SHAKE )
@@ -854,6 +943,11 @@ void Dispatch::ExecuteTask()
             task_state_ = IDLE;
             LINFO("get_hand_shake_from_dispatch_: ", get_hand_shake_from_dispatch_);
             get_hand_shake_from_dispatch_ = false;
+            if ( comm_type_ == "FB_RT_PROC" && "CANCEL_CURCMD" == proc_name_ )
+            {
+                LINFO("in WAIT_DISPATCH_HAND_SHAKE");
+                ResetTask();
+            }
         }
         else
         {
