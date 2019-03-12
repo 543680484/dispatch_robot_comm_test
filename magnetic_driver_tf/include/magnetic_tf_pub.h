@@ -24,6 +24,10 @@ class MagneticTfPub
     bool magnetic_head_is_forward_;
     bool magnetic_tail_is_forward_;
 
+    double x_diff_robot_center_;
+    double y_diff_robot_center_;
+    double angle_diff_robot_center_;
+
     bool run_task_;
     bool head_detected_magnetic_;
     bool tail_detected_magnetic_;

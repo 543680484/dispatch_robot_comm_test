@@ -115,44 +115,56 @@ void MagneticDriverHinson::ReadMagneticReturn(int length_read)
 
     if( length_real_read == length_read )
     {
-        int result_byte = length_read - 5 - 2; //5符号，2校验
+        //计算校验码
+        unsigned int check_result = GetCrcCheck(buf_recv, length_read-2);
+        unsigned char check_result_h = check_result & 0xFF;
+        unsigned char check_result_l = (check_result>>8) & 0xFF;
 
-        if ( result_byte == 1 ) //8个点
+        if ( buf_recv[length_read-2] == check_result_h && buf_recv[length_read-1] == check_result_l )
         {
-            std::bitset<8> bit_0_7 = buf_recv[5];
-            for ( int i = 0; i < 8; ++i )
-            {
-                magnetic_data_msg.data.push_back(bit_0_7[i]);
-            }
-        }
-        else //16个点
-        {
-            std::bitset<8> bit_0_7 = buf_recv[5];//buf_recv[5]第1~7位有效,第0位无效
-            std::bitset<8> bit_8_15 = buf_recv[6];//buf_recv[6]第0~7位有效
-            std::bitset<8> bit_16 = buf_recv[7];//buf_recv[7]第0位有效
+            int result_byte = length_read - 5 - 2; //5符号，2校验
 
-            for ( int i = 1; i < 17; ++i ) //因为buf_recv[5]第0位无效，i从1开始
+            if ( result_byte == 1 ) //8个点
             {
-                if ( i < 8 )
+                std::bitset<8> bit_0_7 = buf_recv[5];
+                for ( int i = 0; i < 8; ++i )
                 {
                     magnetic_data_msg.data.push_back(bit_0_7[i]);
                 }
-                else if ( i < 16 )
+            }
+            else //16个点
+            {
+                std::bitset<8> bit_0_7 = buf_recv[5];//buf_recv[5]第1~7位有效,第0位无效
+                std::bitset<8> bit_8_15 = buf_recv[6];//buf_recv[6]第0~7位有效
+                std::bitset<8> bit_16 = buf_recv[7];//buf_recv[7]第0位有效
+
+                for ( int i = 1; i < 17; ++i ) //因为buf_recv[5]第0位无效，i从1开始
                 {
-                    magnetic_data_msg.data.push_back(bit_8_15[i-8]);
-                }
-                else
-                {
-                    magnetic_data_msg.data.push_back(bit_16[0]);
+                    if ( i < 8 )
+                    {
+                        magnetic_data_msg.data.push_back(bit_0_7[i]);
+                    }
+                    else if ( i < 16 )
+                    {
+                        magnetic_data_msg.data.push_back(bit_8_15[i-8]);
+                    }
+                    else
+                    {
+                        magnetic_data_msg.data.push_back(bit_16[0]);
+                    }
                 }
             }
-        }
 
-        magnetic_pub_.publish(magnetic_data_msg);
+            magnetic_pub_.publish(magnetic_data_msg);
+        }
+        else
+        {
+            ROS_WARN("get a wrong magnetic crc code");
+        }
     }
     else
     {
-        ROS_ERROR("read data failed, %d", length_real_read);
+        ROS_ERROR("%s read data failed, %d", serial_dev_.c_str() ,length_real_read);
         tcflush(serial_fd_, TCOFLUSH);
     }
 }

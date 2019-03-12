@@ -51,6 +51,9 @@ MagneticTfPub::MagneticTfPub()
     nh_p.param("points_num_consider_detected_magnetic_marker", points_num_consider_detected_magnetic_marker_, 8);
     nh_p.param("param_test", param_test_, 1.0);
     nh_p.param("output_odometry_from_marker", output_odometry_from_marker_, false);
+    nh_p.param("x_diff_robot_center", x_diff_robot_center_, 0.0);
+    nh_p.param("y_diff_robot_center", y_diff_robot_center_, 0.0);
+    nh_p.param("angle_diff_robot_center", angle_diff_robot_center_, 0.0);
 
     magnetic_head_pose2d_.x = distance_magnetic_head_to_robot_center;
     magnetic_tail_pose2d_.x = -distance_magnetic_tail_to_robot_center;
@@ -80,6 +83,7 @@ void MagneticTfPub::TaskSwitchCallback(const std_msgs::HeaderPtr &task_switch_ms
 
 void MagneticTfPub::MagneticHeadCallback(const std_msgs::Int32MultiArrayPtr magnetic_head_msg)
 {
+    static int continue_detect_marker_times = 0;
     int num_detected_magnetic = 0;
 
     magnetic_head_pose2d_.y = GetPoseYInRobotBase(magnetic_head_is_forward_, magnetic_head_msg, num_detected_magnetic);
@@ -87,6 +91,7 @@ void MagneticTfPub::MagneticHeadCallback(const std_msgs::Int32MultiArrayPtr magn
     if ( num_detected_magnetic == 0 ) //未检测到磁条
     {
         head_detected_magnetic_ = false;
+        continue_detect_marker_times = 0;
     }
     else //检测到磁条
     {
@@ -94,21 +99,28 @@ void MagneticTfPub::MagneticHeadCallback(const std_msgs::Int32MultiArrayPtr magn
 
         if ( num_detected_magnetic > points_num_consider_detected_magnetic_marker_ )
         {
-            can_detected_head_marker_ = true;
-            if ( head_or_tail_ == NON )
+            ++continue_detect_marker_times;
+            if (continue_detect_marker_times > 2)
             {
-                head_or_tail_ = HEAD;
+                can_detected_head_marker_ = true;
+                if ( head_or_tail_ == NON )
+                {
+                    cout << "head detected marker" << endl;
+                    head_or_tail_ = HEAD;
+                }
             }
         }
         else
         {
             can_detected_head_marker_ = false;
+            continue_detect_marker_times = 0;
         }
     }
 }
 
 void MagneticTfPub::MagneticTailCallback(const std_msgs::Int32MultiArrayPtr magnetic_tail_msg)
 {
+    static int continue_detect_marker_times = 0;
     int num_detected_magnetic = 0;
 
     magnetic_tail_pose2d_.y = GetPoseYInRobotBase(magnetic_tail_is_forward_, magnetic_tail_msg, num_detected_magnetic);
@@ -116,6 +128,7 @@ void MagneticTfPub::MagneticTailCallback(const std_msgs::Int32MultiArrayPtr magn
     if ( num_detected_magnetic == 0 ) //未检测到磁条
     {
         tail_detected_magnetic_ = false;
+        continue_detect_marker_times = 0;
     }
     else //检测到磁条
     {
@@ -123,15 +136,21 @@ void MagneticTfPub::MagneticTailCallback(const std_msgs::Int32MultiArrayPtr magn
 
         if ( num_detected_magnetic > points_num_consider_detected_magnetic_marker_ )
         {
-            can_detected_tail_marker_ = true;
-            if ( head_or_tail_ == NON )
+            ++continue_detect_marker_times;
+            if ( continue_detect_marker_times > 2 )
             {
-                head_or_tail_ = TAIL;
+                can_detected_tail_marker_ = true;
+                if ( head_or_tail_ == NON )
+                {
+                    cout << "tail detected marker" << endl;
+                    head_or_tail_ = TAIL;
+                }
             }
         }
         else
         {
             can_detected_tail_marker_ = false;
+            continue_detect_marker_times = 0;
         }
     }
 }
@@ -218,9 +237,9 @@ void MagneticTfPub::SendTransform( double x, double y, double theta )
     tf::Transform transform;
     static tf::TransformBroadcaster br;
 
-    q.setRPY(0.0, 0.0, theta);
+    q.setRPY(0.0, 0.0, theta + AngleToRadian(angle_diff_robot_center_));
     transform.setRotation(q);
-    transform.setOrigin( tf::Vector3(x, y, 0.0) );
+    transform.setOrigin( tf::Vector3(x + x_diff_robot_center_, y + y_diff_robot_center_, 0.0) );
 
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "magnetic_center"));
 }
@@ -255,7 +274,7 @@ double MagneticTfPub::GetMarkerInOdometryDiff()
 
     if ( need_recod_marker_pose_in_odom_ )//首次检测到磁条标记，记录odom
     {
-        ROS_ERROR("-------------------get magnetic marker----------------------");
+        ROS_ERROR("--get magnetic marker--");
         marker_in_odometry_x = (odometry_marker_start_.x + odometry_marker_end_.x) / 2.0; //odometry_recoder_.pose.pose.position.x;
         marker_in_odometry_y = (odometry_marker_start_.y + odometry_marker_end_.y) / 2.0; //odometry_recoder_.pose.pose.position.y;
 
@@ -346,7 +365,7 @@ void MagneticTfPub::Run()
                 else
                 {
                     ++ no_detected_head_marker_times;
-                    if ( no_detected_head_marker_times > 10 )
+                    if ( no_detected_head_marker_times > 8 )
                     {
                         if ( !get_marker_middle_pose_ )
                         {
@@ -354,7 +373,7 @@ void MagneticTfPub::Run()
                             odometry_marker_end_.y = odometry_recoder_.pose.pose.position.y;
                             get_marker_middle_pose_ = true;
                         }
-                        if ( no_detected_head_marker_times > 300 )
+                        if ( no_detected_head_marker_times > 4*rate_hz )
                         {
                             count_detected_head_marker_ = true;
                         }
@@ -394,7 +413,7 @@ void MagneticTfPub::Run()
                             odometry_marker_end_.y = odometry_recoder_.pose.pose.position.y;
                             get_marker_middle_pose_ = true;
                         }
-                        if ( no_detected_tail_marker_times > 300 )
+                        if ( no_detected_tail_marker_times > 4*rate_hz )
                         {
                             count_detected_tail_marker_ = true;
                         }

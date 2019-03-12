@@ -112,7 +112,7 @@ static int SerialOpen(std::string serial_dev, int baud_rate, int data_bits, char
         return -1;
     }
 
-    newtio.c_cc[VTIME] = 10;
+    newtio.c_cc[VTIME] = 1;//VTIME单位百毫秒
     newtio.c_cc[VMIN] = 10;
     if (0 != (tcsetattr(fd, TCSANOW, &newtio)))
     {
