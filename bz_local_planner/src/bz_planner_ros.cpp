@@ -386,6 +386,7 @@ void BZPlannerROS::reconfigureCB(BZPlannerConfig &config, uint32_t level)
     magnetic_mode_ = config.magnetic_mode;
     distance_x_acc_ = config.distance_x_acc;
     min_stop_vel_x_ = config.min_stop_vel_x;
+    mag_angular_ratio_ = config.mag_angular_ratio;
     ROS_INFO("Updated bz_local_planner dynamic parameters");
 }
 
@@ -635,7 +636,7 @@ bool BZPlannerROS::calcBezierVel(geometry_msgs::Twist& cmd_vel, std::vector<geom
             cmd_vel.linear.x *= linear_x;
 
             double dyaw_angle = dyaw * 180 / 3.14;
-            cmd_vel.angular.z = fabs(cmd_vel.linear.x) * dyaw_angle;
+            cmd_vel.angular.z = fabs(cmd_vel.linear.x) * dyaw_angle * mag_angular_ratio_;
             static double max_angular = 0.1;
             if ( fabs(cmd_vel.angular.z) > max_angular )
             {

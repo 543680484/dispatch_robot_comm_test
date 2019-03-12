@@ -131,6 +131,7 @@ private:
     bool magnetic_mode_;
     double distance_x_acc_;
     double min_stop_vel_x_;
+    double mag_angular_ratio_;
     bool get_distance_start_to_goal_;
     //add by wangcaijie end
 
