@@ -82,6 +82,8 @@ protected:
     double magnetic_back_offset_;
     double battery_percentage_;
 
+    long long int agv_error_code_;
+
     enum task_state
     {
         IDLE,

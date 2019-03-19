@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<launch>
+    <node name="rosbridge_plc$(arg name)" pkg="rosbridge_driver" type="rosbridge_driver" output="screen" if="$(arg siemens_tcp_client_hrg)">
+        <param name="plc_port" value="$(arg port)"/>
+        <rosparam>
+            port_chain:
+              - name: plc_port
+                type: socket
+                ip_address: 192.168.250.1
+                ip_port: 9527
+            topic_chain:
+              - name: waypoint_user_pub
+                type: subscribe
+                freq: 20.0
+              - name: joy
+                type: sensor_msgs/Joy
+                freq: 20.0
+                enable: 0.5 #-1
+                int_m12.1_k: -1.0
+                int_m12.3_k: -1.0
+                linear_x_sum: [m12.0, m12.1]//无线遥控器：前进，后退
+                angular_z_sum: [m12.2, m12.3]//无线遥控器：左转，右转
+                byte_lift_down: [int_m12.5, int_m12.7, int_m14.3, int_m14.5]//无线遥控器：辊道1,2下料 //中间继电器：辊道1,2下料
+                byte_lift_up: [int_m12.4, int_m12.6, int_m14.2, int_m14.4]//无线遥控器：辊道1,2上料 //中间继电器：辊道1,2上料
+                byte_joy_lb: [int_m11.2, int_m11.4]//辊道限位传感器：辊道1,2下料到位
+                byte_joy_rb: [int_m11.1, int_m11.3]//辊道限位传感器：辊道1,2上料到位
+                byte_estop: [int_m10.4, int_m10.3, int_m10.0]//急停，安全触边，后激光雷达
+                byte_modex: [int_m11.5, int_m11.6]//模式切换：手推，遥控
+                axes: [linear_y, linear_x, enable, angular_z, linear_z, enable, angular_y, angular_x]
+                buttons: [enable2, buzzer, lift_down, lift_up, joy_lb, joy_rb, estop, start, modex, pedal, stick]
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x03, 0x00, 0x00, 0x00, 0x03]
+                  - name: plc_port
+                    type: read
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x03, 0x06, int_m10, int_m11, int_m12, int_m13, int_m14, int_m15]
+              - name: joy_feedback
+                type: sensor_msgs/JoyFeedback
+                freq: 1.0
+                int_m14: 0x81
+                int_m15: 0x00
+                itype: 0
+                id: 0
+                enum_intensity: [itype, axes, buttons]
+                enum_axes: [id, linear_y, linear_x, enable, angular_z, linear_z, enable, angular_y, angular_x]
+                enum_int_buttons: [id, enable, buzzer, lift_down, lift_up, joy_lb, joy_rb, estop, start, modex, pedal, stick]
+                byte_enable: [int_m14.0]//车体冰蓝指示灯亮
+                byte_lift_down: [int_m14.3, int_m14.5]//辊道1,2下料
+                byte_lift_up: [int_m14.2, int_m14.4]//辊道1,2上料
+                byte_stick: [int_m14.1, int_m15.1, int_m15.2, int_m15.3, int_m15.4]//车体黄色指示灯亮，辊道1绿1红2绿2红
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x10, 0x00, 0x02, 0x00, 0x01, 0x02, int_m14, int_m15]
+                  - name: plc_port
+                    type: read
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x10, 0x00, 0x02, 0x00, 0x01]
+        </rosparam>
+    </node>
+</launch>

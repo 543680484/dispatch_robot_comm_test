@@ -35,8 +35,11 @@ add_executable(magnetic_driver_hinson src/magnetic_driver_hinson.cpp ${HEADER_FI
 target_link_libraries(magnetic_driver_hinson ${catkin_LIBRARIES})
 add_dependencies(magnetic_driver_hinson ${PROJECT_NAME}_generate_messages_cpp)
 
+add_executable(sound_player_driver src/sound_player_driver.cpp ${HEADER_FILES})
+target_link_libraries(sound_player_driver ${catkin_LIBRARIES})
+add_dependencies(sound_player_driver ${PROJECT_NAME}_generate_messages_cpp)
+
 add_executable(magnetic_tf_pub src/magnetic_tf_pub.cpp)
 target_link_libraries(magnetic_tf_pub ${catkin_LIBRARIES})# ${CERES_LIBRARIES})
-add_dependencies(magnetic_tf_pub
-        ${PROJECT_NAME}_generate_messages_cpp
-        ${artoolkit_EXPORTED_TARGETS})
+add_dependencies(magnetic_tf_pub ${PROJECT_NAME}_generate_messages_cpp)
+#        ${artoolkit_EXPORTED_TARGETS})

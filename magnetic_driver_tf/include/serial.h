@@ -1,7 +1,7 @@
 #include <fcntl.h>
 #include <termios.h>
 
-static int SerialOpen(std::string serial_dev, int baud_rate, int data_bits, char parity, int stop_bits)
+static int SerialOpen(std::string serial_dev, int baud_rate, int data_bits, char parity, int stop_bits, int vmin)
 {
     int fd = open(serial_dev.c_str(), O_RDWR|O_NOCTTY);//|O_NDELAY
     if (fd < 0)
@@ -113,7 +113,7 @@ static int SerialOpen(std::string serial_dev, int baud_rate, int data_bits, char
     }
 
     newtio.c_cc[VTIME] = 1;//VTIME单位百毫秒
-    newtio.c_cc[VMIN] = 10;
+    newtio.c_cc[VMIN] = vmin;//磁条10，喇叭7
     if (0 != (tcsetattr(fd, TCSANOW, &newtio)))
     {
         printf("failure: set attr %s\n", serial_dev.c_str());

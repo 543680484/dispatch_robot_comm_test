@@ -1,0 +1,543 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="siemens_rtu" default="false"/>
+    <arg name="siemens_tcp" default="false"/>
+    <arg name="hrg_drive" default="false"/>
+    <arg name="hrg_drive_imu" default="false"/>
+    <arg name="siemens_tcp_server_hrg" default="false"/>
+    <arg name="siemens_tcp_client_hrg" default="false"/>
+    <arg name="name" default=""/>
+    <arg name="rate" default="50.0"/>
+    <arg name="port" default="/dev/ttyUSB0"/>
+    <arg name="wheel_seperation" default="0.5"/>
+    <arg name="wheel_ratio" default="23333.3"/>
+
+    <node name="rosbridge_plc$(arg name)" pkg="rosbridge_driver" type="rosbridge_driver" output="screen" if="$(arg siemens_rtu)">
+        <param name="plc_port" value="$(arg port)"/>
+        <rosparam>
+            port_chain:
+              - name: plc_port
+                type: serial
+                serial_stop: 1
+                timeout: 0.1
+                timeoff: 0.005
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x01, 0x02, 0xcf, 0xfd, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x01, crc16, little]
+            topic_chain:
+              - name: cmd_vel
+                type: subscribe
+                freq: 50.0
+                freq_overflow: false
+                wheel_model: acke
+                linear_ratio: 1.54 #2.296(v)/0.555(m/s)
+                analog_min: 0.574 # 8.2*7%
+                analog_max: 2.87 # 8.2*35%
+                analog_mid: 4.1 # 8.2*50%
+                analog_seg: [0.0,0.1556,0.4667,0.9333,1.5556]
+                analog_offset: -0.005 # ratio percent
+                steer_ratio: 4.6875 #4.35
+                steer_mid: 5.1 #4.1
+                plc_ratio: 3200.0 # 0~32000/0-10(v)
+                plc_limit: 1600.0
+                wheel_base: 1.55
+                vel_linear_max: 0.55
+                angle_left: 16320 #temp for test
+                plc_io: 0
+                stop_mode: pub_manual
+                read_mode: sub_manual
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x05, 0x0a, 0x00, 0x00, plc_io, big, speed_plc, big, angle_left, big, angle_right, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x05, crc16, little]
+              - name: waypoint_user_pub
+                type: subscribe
+                freq: 5.0
+              - name: pub_manual
+                type: event
+                plc_io: 0
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x01, 0x02, 0xcf, 0xfd, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x01, crc16, little]
+              - name: pub_auto
+                type: event
+                speed: 0
+                steer: 0
+                check: 0
+                plc_io: 0
+                switch: 0
+                echo: [speed,steer,check,plc_io,switch]
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x03, 0x00, 0x61, 0x00, 0x04, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x03, 0x08, speed, big, steer, big, plc_io, big, switch, big, crc16, little]
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x03, 0x00, 0x6d, 0x00, 0x01, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x03, 0x02, check, big, crc16, little]
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x09, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x33, 0x40, steer, big, check, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x09, crc16, little]
+              - name: pub_steer
+                type: event
+                roar: [left,right]
+                left: 0
+                right: 0
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x6b, 0x00, 0x02, 0x04, left, big, right, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x6b, 0x00, 0x02, crc16, little]
+              - name: pub_warn_on
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x09, 0x12, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x33, 0x40, 0x3f, 0xc0, 0x3f, 0xc0, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x09, crc16, little]
+                    time_out: 5.0
+              - name: pub_warn_off
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x09, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x34, 0xc9, 0x2d, 0xe6, 0x38, 0x66, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x09, crc16, little]
+                    #time_out: 5.0
+              - name: pub_down
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x10, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x02, crc16, little]
+                    #time_out: 5.0
+              - name: pub_hang
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x02, crc16, little]
+                    #time_out: 5.0        
+              - name: pub_raise
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x20, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x10, 0x00, 0x64, 0x00, 0x02, crc16, little]
+                    #time_out: 5.0  
+              - name: pub_touch
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x03, 0x00, 0x63, 0x00, 0x01, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x03, 0x02, touch, big, crc16, little]
+                    time_out: 5.0
+                echo: touch
+              - name: sub_manual
+                type: event
+                freq: 5.0
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x06, 0x03, 0x00, 0x61, 0x00, 0x03, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0x06, 0x03, 0x06, angular, big, linear, big, digital, big, crc16, little]
+                echo: [linear, angular, digital]
+              - name: diagnostics
+                type: publish
+        </rosparam>
+    </node>
+
+    <node name="rosbridge_drive$(arg name)" pkg="rosbridge_driver" type="rosbridge_driver" output="screen" if="$(arg hrg_drive)">
+        <param name="plc_port" value="$(arg port)"/>
+        <param name="wheel_seperation" value="$(arg wheel_seperation)"/>
+        <param name="wheel_ratio" value="$(arg wheel_ratio)"/>
+        <param name="encoder_resolution" value="10000.0"/>
+        <param name="gear_ratio" value="25.0"/>
+        <param name="diameter" value="0.2"/>
+        <param name="cmd_vel_timeout" value="0.5"/>
+        <rosparam>
+            port_chain:
+              - name: plc_port
+                type: serial
+                serial_baud: 115200
+                serial_stop: 1
+                timeout: 0.5
+                respawn: false
+            topic_chain:
+              - name: cmd_vel
+                type: subscribe
+                freq: 50.0
+                freq_overflow: false
+                wheel_model: diff
+                wheel_phase_reverse: true
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x5e, 0x00, 0x04, 0x08, vel_left, big, little, big, vel_right, big, little, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x5e, 0x00, 0x08, crc16, little]
+
+              - name: waypoint_user_pub
+                type: subscribe
+                freq: 5.0
+
+              - name: pub_lift_up
+                type: event
+                up_vel: 100
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x02, 0x04, up_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x04, crc16, little]
+
+              - name: pub_lift_down
+                type: event
+                down_vel: -100
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x02, 0x04, down_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x04, crc16, little]
+
+            ### lift_status: 2-bottom 0-moving status 1-top ###
+              - name: read_lift_up
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0xcc, 0x00, 0x01, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x02, lift_status, big, crc16, little]
+                echo: [lift_status]
+              - name: read_lift_down
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0xcc, 0x00, 0x01, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x02, lift_status, big, crc16, little]
+                echo: [lift_status]
+
+              - name: read_status
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0xcc, 0x00, 0x02, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x04, lift_status, big, estop_status, big, crc16, little]
+                echo: [lift_status, estop_status]
+
+              - name: pub_lift_down
+                type: event
+                down_vel: -100
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x02, 0x04, down_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x04, crc16, little]
+
+              - name: pub_lift_rotate
+                type: event
+                rot_vel: 0
+                roar: [rot_vel]
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x64, 0x00, 0x02, 0x04, rot_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x64, 0x00, 0x04, crc16, little]
+
+              - name: odom
+                type: publish
+                freq: 50.0
+                use_encoder: true
+                odom_yaw_covariance: 1.0 #0.8
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0x9a, 0x00, 0x04, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x08, left_encoder, big, little, big, right_encoder, big, little, big, crc16, little]
+        </rosparam>
+    </node>
+
+    <node name="rosbridge_drive$(arg name)" pkg="rosbridge_driver" type="rosbridge_driver" output="screen" if="$(arg hrg_drive_imu)">
+        <param name="plc_port" value="$(arg port)"/>
+        <param name="wheel_seperation" value="$(arg wheel_seperation)"/>
+        <param name="wheel_ratio" value="$(arg wheel_ratio)"/>
+        <param name="encoder_resolution" value="10000.0"/>
+        <param name="gear_ratio" value="25.0"/>
+        <param name="diameter" value="0.2"/>
+        <param name="cmd_vel_timeout" value="0.5"/>
+        <rosparam>
+            port_chain:
+              - name: plc_port
+                type: serial
+                serial_baud: 115200
+                serial_stop: 1
+                timeout: 0.5
+                respawn: false
+            topic_chain:
+              - name: cmd_vel
+                type: subscribe
+                freq: 50.0
+                freq_overflow: false
+                wheel_model: diff
+                wheel_phase_reverse: true
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x5e, 0x00, 0x04, 0x08, vel_left, big, big, big, vel_right, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x5e, 0x00, 0x08, crc16, little]
+
+              - name: waypoint_user_pub
+                type: subscribe
+                freq: 5.0
+
+              - name: pub_lift_up
+                type: event
+                up_vel: 100
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x02, 0x04, up_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x04, crc16, little]
+
+              - name: pub_lift_down
+                type: event
+                down_vel: -100
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x02, 0x04, down_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x04, crc16, little]
+
+            ### lift_status: 2-bottom 0-moving status 1-top ###
+              - name: read_lift_up
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0xcc, 0x00, 0x01, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x02, lift_status, big, crc16, little]
+                echo: [lift_status]
+              - name: read_lift_down
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0xcc, 0x00, 0x01, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x02, lift_status, big, crc16, little]
+                echo: [lift_status]
+
+              - name: read_status
+                type: event
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0xcc, 0x00, 0x02, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x04, lift_status, big, estop_status, big, crc16, little]
+                echo: [lift_status, estop_status]
+
+              - name: pub_lift_down
+                type: event
+                down_vel: -100
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x02, 0x04, down_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x62, 0x00, 0x04, crc16, little]
+
+              - name: pub_lift_rotate
+                type: event
+                rot_vel: 0
+                roar: [rot_vel]
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x10, 0x01, 0x64, 0x00, 0x02, 0x04, rot_vel, big, big, big, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x10, 0x01, 0x64, 0x00, 0x04, crc16, little]
+
+              - name: odom
+                type: publish
+                freq: 50.0
+                pub_imu: true
+                imu_gyr_ratio: 0.00001
+                odom_yaw_covariance: 0.8
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xf1, 0x03, 0x01, 0x9a, 0x00, 0x06, crc16, little]
+                  - name: plc_port
+                    type: read
+                    byte: [0xf1, 0x03, 0x0c, vel_left, big, big, big, vel_right, big, big, big, int_gyr_z, big, big, big, crc16, little]
+        </rosparam>
+    </node>
+
+    <node name="rosbridge_plc$(arg name)" pkg="rosbridge_driver" type="rosbridge_driver" output="screen" if="$(arg siemens_tcp_server_hrg)">
+        <param name="plc_port" value="$(arg port)"/>
+        <param name="plc_server_port" value="$(arg port)"/>
+        <rosparam>
+            port_chain:
+              - name: plc_server_port
+                type: socket
+                ip_port: 3000
+              - name: plc_port
+                type: socket
+                ip_bind: plc_server_port
+            topic_chain:
+              - name: waypoint_user_pub
+                type: subscribe
+                freq: 20.0
+              - name: plc_send
+                type: event
+                freq: 10.0
+                roar: [sdata]
+                sdata: 0
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0xff, 0x03, sdata, little]
+                    lock: false
+              - name: plc_recv
+                type: event
+                freq: 20.0
+                action_chain:
+                  - name: plc_port
+                    type: read
+                    byte: [0xff, 0x10, rdata, little, little, little, battery1, battery2, battery3, battery4]
+                    lock: true
+                echo: [rdata, battery1, battery2, battery3, battery4]
+              - name: diagnostics
+                type: publish
+        </rosparam>
+    </node>
+
+    <node name="rosbridge_plc$(arg name)" pkg="rosbridge_driver" type="rosbridge_driver" output="screen" if="$(arg siemens_tcp_client_hrg)">
+        <param name="plc_port" value="$(arg port)"/>
+        <rosparam>
+            port_chain:
+              - name: plc_port
+                type: socket
+                ip_address: 192.168.250.1
+                ip_port: 9527
+            topic_chain:
+              - name: waypoint_user_pub
+                type: subscribe
+                freq: 20.0
+              - name: joy
+                type: sensor_msgs/Joy
+                freq: 20.0
+                enable: 0.5 #-1
+                int_m12.1_k: -1.0
+                int_m12.3_k: -1.0
+                linear_x_sum: [m12.0, m12.1]
+                angular_z_sum: [m12.2, m12.3]
+                byte_lift_down: [int_m12.5, int_m12.7, int_m14.3, int_m14.5]
+                byte_lift_up: [int_m12.4, int_m12.6, int_m14.2, int_m14.4]
+                byte_joy_lb: [int_m11.2, int_m11.4]
+                byte_joy_rb: [int_m11.1, int_m11.3]
+                byte_estop: [int_m10.4, int_m10.3, int_m10.0]
+                byte_modex: [int_m11.5, int_m11.6]
+                axes: [linear_y, linear_x, enable, angular_z, linear_z, enable, angular_y, angular_x]
+                buttons: [enable2, buzzer, lift_down, lift_up, joy_lb, joy_rb, estop, start, modex, pedal, stick]
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x03, 0x00, 0x00, 0x00, 0x03]
+                  - name: plc_port
+                    type: read
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x03, 0x06, int_m10, int_m11, int_m12, int_m13, int_m14, int_m15]
+              - name: joy_feedback
+                type: sensor_msgs/JoyFeedback
+                freq: 1.0
+                int_m14: 0x81
+                int_m15: 0x00
+                itype: 0
+                id: 0
+                enum_intensity: [itype, axes, buttons]
+                enum_axes: [id, linear_y, linear_x, enable, angular_z, linear_z, enable, angular_y, angular_x]
+                enum_int_buttons: [id, enable, buzzer, lift_down, lift_up, joy_lb, joy_rb, estop, start, modex, pedal, stick]
+                byte_enable: [int_m14.0]
+                byte_lift_down: [int_m14.3, int_m14.5]
+                byte_lift_up: [int_m14.2, int_m14.4]
+                byte_stick: [int_m14.1, int_m15.1, int_m15.2, int_m15.3, int_m15.4]//辊道灯
+                action_chain:
+                  - name: plc_port
+                    type: write
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x00, 0x10, 0x00, 0x02, 0x00, 0x01, 0x02, int_m14, int_m15]
+                  - name: plc_port
+                    type: read
+                    byte: [0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x10, 0x00, 0x02, 0x00, 0x01]
+        </rosparam>
+    </node>
+</launch>

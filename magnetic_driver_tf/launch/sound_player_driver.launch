@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node name="sound_player_driver" pkg="magnetic_driver_tf" type="sound_player_driver" output="screen">
+      <rosparam>
+          serial_dev: /dev/ttyS5
+      </rosparam>
+  </node>
+
+</launch>

@@ -31,6 +31,7 @@ Dispatch::Dispatch()
     ,get_new_move_(false)
     ,battery_percentage_(1.0)
     ,waypoint_name_trajectorie_finished_("")
+    ,agv_error_code_(0)
 {
     robot_pose_sub_ = nh_.subscribe("/robot_pose", 1, &Dispatch::RobotPoseCallBack, this);
     battery_sub_ = nh_.subscribe("/battery", 1, &Dispatch::BatteryCallBack, this);
@@ -793,7 +794,7 @@ void Dispatch::MsgToDispatch(string dev_type, string& msg_agv_to_dispatch)
     AGVInfor["a"] = agv_pose2d_.theta;
 
     AGVInfor["Cell_Quan"] = battery_percentage_;
-    AGVInfor["ERROR"] = 1;
+    AGVInfor["ERROR"] = agv_error_code_;
 
     //一般状态，握手，任务完成
     if ( trajectorie_finished_ )

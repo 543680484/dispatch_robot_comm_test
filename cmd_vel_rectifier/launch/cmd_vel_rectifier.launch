@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+    <node name="cmd_vel_rectifier" pkg="cmd_vel_rectifier" type="cmd_vel_rectifier" output="screen" >
+        <rosparam subst_value="true">
+            use_joy_feedback: true
+            twist_factor: 0.2
+            volume: 20
+        </rosparam>
+    </node>
+</launch>

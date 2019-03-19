@@ -171,14 +171,6 @@ void MagneticDriverHinson::ReadMagneticReturn(int length_read)
 
 void MagneticDriverHinson::Run()
 {
-    serial_fd_ = SerialOpen(serial_dev_, 115200, 8, 'N', 1);
-    while ( serial_fd_ <= 0 && ros::ok() )
-    {
-        SerialClose();
-        ros::Duration(1.0).sleep();
-        serial_fd_ = SerialOpen(serial_dev_, 115200, 8, 'N', 1);
-    }
-
     InitBufSend();
 
     int length_read = 0;
@@ -196,6 +188,14 @@ void MagneticDriverHinson::Run()
         ROS_ERROR("undefied magnetic type :%d", magnetic_point_);
         SerialClose();
         return;
+    }
+
+    serial_fd_ = SerialOpen(serial_dev_, 115200, 8, 'N', 1, length_read);
+    while ( serial_fd_ <= 0 && ros::ok() )
+    {
+        SerialClose();
+        ros::Duration(1.0).sleep();
+        serial_fd_ = SerialOpen(serial_dev_, 115200, 8, 'N', 1, length_read);
     }
 
     ros::Rate r(100);
