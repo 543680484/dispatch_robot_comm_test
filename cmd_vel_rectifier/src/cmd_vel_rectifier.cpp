@@ -1,7 +1,20 @@
 #include <cmd_vel_rectifier.h>
 
 cmd_vel_rectifier::cmd_vel_rectifier()
-:ph_("~")//todo
+:ph_("~")
+,nh_()
+,cmd_vel_rectified_pub_()
+,joy_feedback_pub_()
+,robotsound_pub_()
+,sound_player_pub_()
+,cmd_vel_sub_()
+,joy_sub_()
+,battery_sub_()
+,joy_timestamp_()
+,joy_()
+,robot_in_move_(false)
+,joy_estop_laser_trigged_(false)
+,trigged_status_()
 {
     init_param();
 
@@ -19,9 +32,6 @@ cmd_vel_rectifier::cmd_vel_rectifier()
     joy_.axes.resize(JOYX_AXES);
     joy_.buttons.resize(JOYX_BUTTONS);
     trigged_status_.resize(BATTERY_LOW+1);
-
-    joy_estop_laser_trigged_ = false;
-    robot_in_move_ = false;
 
     show_help();
 }

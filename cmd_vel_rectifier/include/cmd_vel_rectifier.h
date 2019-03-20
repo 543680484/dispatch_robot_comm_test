@@ -42,8 +42,8 @@ private:
     void LightControl( const sensor_msgs::Joy &joy );
 
 private:
-    ros::NodeHandle nh_;
     ros::NodeHandle ph_;
+    ros::NodeHandle nh_;
     ros::Publisher cmd_vel_rectified_pub_;
     ros::Publisher joy_feedback_pub_;
     ros::Publisher robotsound_pub_;
