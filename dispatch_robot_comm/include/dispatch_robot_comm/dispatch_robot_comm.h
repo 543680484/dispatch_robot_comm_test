@@ -12,6 +12,7 @@
 #include <yocs_msgs/NavigationControl.h>
 #include <yocs_msgs/NavigationControlStatus.h>
 #include <sensor_msgs/BatteryState.h>
+#include <sensor_msgs/Joy.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +48,7 @@ protected:
     ros::Subscriber battery_sub_;
     ros::Subscriber navigation_control_status_sub_;
     ros::Subscriber navigation_control_sub_;
+    ros::Subscriber joy_sub_;
 
     ros::Publisher trajectories_add_pub_;
     ros::Publisher trajectories_remove_pub_;
@@ -104,6 +106,7 @@ protected:
     void BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg);
     void NavigationControlStatusCallBack(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr);
     void AgvCancelTaskCallBack(const yocs_msgs::NavigationControlConstPtr &navigation_control_msg);
+    void JoyCallback(const sensor_msgs::Joy::ConstPtr& msg);
 
     void TrajectorieAddPub();
     void TrajectorieRemovePub(string trajectories_name);

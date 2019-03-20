@@ -8,6 +8,7 @@ Dispatch::Dispatch()
     ,robot_pose_sub_()
     ,navigation_control_status_sub_()
     ,navigation_control_sub_()
+    ,joy_sub_()
     ,trajectories_add_pub_()
     ,trajectories_remove_pub_()
     ,navigation_control_pub_()
@@ -37,6 +38,7 @@ Dispatch::Dispatch()
     battery_sub_ = nh_.subscribe("/battery", 1, &Dispatch::BatteryCallBack, this);
     navigation_control_status_sub_ = nh_.subscribe("/nav_ctrl_status", 3, &Dispatch::NavigationControlStatusCallBack, this);
     navigation_control_sub_ = nh_.subscribe("/nav_ctrl", 2 ,&Dispatch::AgvCancelTaskCallBack, this);
+    joy_sub_ =  nh_.subscribe<sensor_msgs::Joy>("/joy", 5, &Dispatch::JoyCallback, this);
 
     trajectories_add_pub_ = nh_.advertise<yocs_msgs::Trajectory>("/trajectory_add",1);
     trajectories_remove_pub_ = nh_.advertise<yocs_msgs::Trajectory>("/trajectory_remove",1);
@@ -179,6 +181,18 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
     LINFO("TrajectorieRemovePub: ", trajectory_msg.name);
 
     trajectories_remove_pub_.publish(trajectory_msg);
+}
+
+void Dispatch::JoyCallback(const sensor_msgs::Joy::ConstPtr& msg)
+{
+    if ( msg->buttons[6] != 0 )
+    {
+        agv_error_code_ = 1;
+    }
+    else
+    {
+        agv_error_code_ = 0;
+    }
 }
 
 void Dispatch::NavigationControlStatusCallBack(const yocs_msgs::NavigationControlStatusConstPtr &navigation_control_msg_ptr)
