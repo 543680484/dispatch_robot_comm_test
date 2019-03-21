@@ -1,6 +1,6 @@
 #include <cmd_vel_rectifier.h>
 
-cmd_vel_rectifier::cmd_vel_rectifier()
+VelocityAndLightControl::VelocityAndLightControl()
 :ph_("~")
 ,nh_()
 ,cmd_vel_rectified_pub_()
@@ -10,7 +10,6 @@ cmd_vel_rectifier::cmd_vel_rectifier()
 ,cmd_vel_sub_()
 ,joy_sub_()
 ,battery_sub_()
-,joy_timestamp_()
 ,joy_()
 ,robot_in_move_(false)
 ,joy_estop_laser_trigged_(false)
@@ -25,9 +24,9 @@ cmd_vel_rectifier::cmd_vel_rectifier()
     }
     sound_player_pub_ = nh_.advertise<sound_play::SoundRequest>("robotsound", 10, true);
 
-    joy_sub_ =  nh_.subscribe<sensor_msgs::Joy>("joy", 10, &cmd_vel_rectifier::joy_sub, this);
-    cmd_vel_sub_ =  nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &cmd_vel_rectifier::cmd_vel_sub, this);
-    battery_sub_ = nh_.subscribe("/battery", 1, &cmd_vel_rectifier::BatteryCallBack, this);
+    joy_sub_ =  nh_.subscribe<sensor_msgs::Joy>("joy", 10, &VelocityAndLightControl::joy_sub, this);
+    cmd_vel_sub_ =  nh_.subscribe<geometry_msgs::Twist>("cmd_vel", 10, &VelocityAndLightControl::cmd_vel_sub, this);
+    battery_sub_ = nh_.subscribe("/battery", 1, &VelocityAndLightControl::BatteryCallBack, this);
 
     joy_.axes.resize(JOYX_AXES);
     joy_.buttons.resize(JOYX_BUTTONS);
@@ -36,7 +35,7 @@ cmd_vel_rectifier::cmd_vel_rectifier()
     show_help();
 }
 
-void cmd_vel_rectifier::init_param()
+void VelocityAndLightControl::init_param()
 {
     ph_.param("use_joy_feedback", use_joy_feedback_, false);
     double twist_factor;
@@ -51,7 +50,7 @@ void cmd_vel_rectifier::init_param()
     ph_.param("volume", volume_, 15);
 }
 
-void cmd_vel_rectifier::SoundPlayerPub( int sound )
+void VelocityAndLightControl::SoundPlayerPub( int sound )
 {
     sound_play::SoundRequest msg_sound_player;
     msg_sound_player.sound = sound;//音乐(0x00~0xFF,0x00停止)
@@ -59,7 +58,7 @@ void cmd_vel_rectifier::SoundPlayerPub( int sound )
     sound_player_pub_.publish(msg_sound_player);
 }
 
-void cmd_vel_rectifier::CmdVelRectifiedPubStop()
+void VelocityAndLightControl::CmdVelRectifiedPubStop()
 {
     robot_in_move_ = false;
 
@@ -69,7 +68,7 @@ void cmd_vel_rectifier::CmdVelRectifiedPubStop()
     cmd_vel_rectified_pub_.publish(msg_zero);
 }
 
-void cmd_vel_rectifier::CmdVelRectifiedPub(geometry_msgs::Twist msg_twist)
+void VelocityAndLightControl::CmdVelRectifiedPub(geometry_msgs::Twist msg_twist)
 {
     if ( fabs(msg_twist.linear.x) > 0.01 || fabs(msg_twist.angular.z) > 0.01 )
     {
@@ -83,7 +82,7 @@ void cmd_vel_rectifier::CmdVelRectifiedPub(geometry_msgs::Twist msg_twist)
     cmd_vel_rectified_pub_.publish(msg_twist);
 }
 
-void cmd_vel_rectifier::BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg)
+void VelocityAndLightControl::BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg)
 {
     if ( battery_msg->percentage < 0.2 )
     {
@@ -95,7 +94,7 @@ void cmd_vel_rectifier::BatteryCallBack(const sensor_msgs::BatteryStatePtr &batt
     }
 }
 
-bool cmd_vel_rectifier::joy_feedback_array_pub(sensor_msgs::Joy& joy)
+bool VelocityAndLightControl::joy_feedback_array_pub(sensor_msgs::Joy& joy)
 {
     bool is_timestamp = false;
     sensor_msgs::JoyFeedbackArray joy_feedback_array;
@@ -126,7 +125,7 @@ bool cmd_vel_rectifier::joy_feedback_array_pub(sensor_msgs::Joy& joy)
     return is_timestamp;
 }
 
-void cmd_vel_rectifier::cmd_vel_sub(const geometry_msgs::Twist::ConstPtr& msg)
+void VelocityAndLightControl::cmd_vel_sub(const geometry_msgs::Twist::ConstPtr& msg)
 {
     //if (joy_estop_laser_trigged_ && msg->linear.x < 0)//后雷达触发且后退
     if (joy_estop_laser_trigged_)//后雷达触发
@@ -139,7 +138,7 @@ void cmd_vel_rectifier::cmd_vel_sub(const geometry_msgs::Twist::ConstPtr& msg)
     }
 }
 
-void cmd_vel_rectifier::LightControl( const sensor_msgs::Joy &joy )
+void VelocityAndLightControl::LightControl( const sensor_msgs::Joy &joy )
 {
     sensor_msgs::JoyFeedback joy_feedback;
     joy_feedback.type = 1; //type = 1 即 enum_intensity选择buttons
@@ -180,7 +179,7 @@ void cmd_vel_rectifier::LightControl( const sensor_msgs::Joy &joy )
     joy_feedback_pub_.publish(joy_feedback);
 }
 
-void cmd_vel_rectifier::joy_sub(const sensor_msgs::Joy::ConstPtr& msg)
+void VelocityAndLightControl::joy_sub(const sensor_msgs::Joy::ConstPtr& msg)
 {
     sensor_msgs::Joy joy;
     if (JOYD_AXES == (JOYENUM)msg->axes.size() && JOYD_BUTTONS == (JOYENUM)msg->buttons.size()) {
@@ -266,7 +265,7 @@ void cmd_vel_rectifier::joy_sub(const sensor_msgs::Joy::ConstPtr& msg)
     SoundPlayerControl();
 }
 
-void cmd_vel_rectifier::SoundPlayerControl()
+void VelocityAndLightControl::SoundPlayerControl()
 {
     static SOUND sound_current = UNDEFINED;
     static SOUND sound_last = UNDEFINED;
@@ -305,7 +304,7 @@ void cmd_vel_rectifier::SoundPlayerControl()
     }
 }
 
-void cmd_vel_rectifier::show_help()
+void VelocityAndLightControl::show_help()
 {
     puts("------------------------------");
     puts("--  joystick teleoperation  --");

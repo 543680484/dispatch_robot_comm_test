@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-  <node name="magnetic_driver_hinson_head" pkg="magnetic_driver_tf" type="magnetic_driver_hinson" output="screen">
+  <node name="magnetic_driver_hinson_head" pkg="guoxuan_driver" type="magnetic_driver_hinson" output="screen">
       <rosparam>
           serial_dev: /dev/ttyS2
           magnetic_point: 16
@@ -10,7 +10,7 @@
   </node>
 
 
-  <node name="magnetic_driver_hinson_tail" pkg="magnetic_driver_tf" type="magnetic_driver_hinson" output="screen">
+  <node name="magnetic_driver_hinson_tail" pkg="guoxuan_driver" type="magnetic_driver_hinson" output="screen">
       <rosparam>
           serial_dev: /dev/ttyS3
           magnetic_point: 16
@@ -19,7 +19,7 @@
   </node>
 
 
-  <node pkg="magnetic_driver_tf" type="magnetic_tf_pub" name="magnetic_tf_pub" output="screen">
+  <node name="magnetic_tf_pub" pkg="guoxuan_driver" type="magnetic_tf_pub" output="screen">
 
     <param name="magnetic_head_is_forward"                      value="false"   type="bool"/>
     <param name="magnetic_tail_is_forward"                      value="true"    type="bool"/>

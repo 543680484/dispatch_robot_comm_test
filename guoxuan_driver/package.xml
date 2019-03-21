@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>magnetic_driver_tf</name>
+  <name>guoxuan_driver</name>
   <version>0.0.0</version>
-  <description>The magnetic_driver_tf package</description>
+  <description>The guoxuan_driver package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

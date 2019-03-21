@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(cmd_vel_rectifier)
+project(velocity_and_light_control)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -132,7 +132,7 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(cmd_vel_rectifier_node src/cmd_vel_rectifier_node.cpp)
-add_executable(cmd_vel_rectifier src/cmd_vel_rectifier.cpp)
+add_executable(velocity_and_light_control src/velocity_and_light_control.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -142,7 +142,7 @@ add_executable(cmd_vel_rectifier src/cmd_vel_rectifier.cpp)
 # target_link_libraries(cmd_vel_rectifier_node
 #   ${catkin_LIBRARIES}
 # )
-target_link_libraries(cmd_vel_rectifier ${catkin_LIBRARIES})
+target_link_libraries(velocity_and_light_control ${catkin_LIBRARIES})
 
 #############
 ## Install ##
@@ -164,7 +164,7 @@ target_link_libraries(cmd_vel_rectifier ${catkin_LIBRARIES})
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
-install(TARGETS cmd_vel_rectifier
+install(TARGETS velocity_and_light_control
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

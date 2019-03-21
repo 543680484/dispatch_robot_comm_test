@@ -185,7 +185,7 @@ void Dispatch::TrajectorieRemovePub(string trajectories_name)
 
 void Dispatch::JoyCallback(const sensor_msgs::Joy::ConstPtr& msg)
 {
-    if ( msg->buttons[6] != 0 )
+    if ( msg->buttons[6] != 0 ) //&3: 取急停和安全触边，不取后雷达
     {
         agv_error_code_ = 1;
     }

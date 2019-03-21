@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>cmd_vel_rectifier</name>
+  <name>velocity_and_light_control</name>
   <version>0.0.0</version>
-  <description>The cmd_vel_rectifier package</description>
+  <description>The velocity_and_light_control package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

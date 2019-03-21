@@ -1,5 +1,3 @@
-//速度，上下料，急停等触发
-
 /*喇叭音频：
 1.注意安全请避让
 2.设备故障请处理
@@ -9,6 +7,9 @@
 6.开始充电
 7.结束充电
 8.设备对接中*/
+
+#ifndef VELOCITY_AND_LIGHT_CONTROL
+#define VELOCITY_AND_LIGHT_CONTROL
 
 #include <ros/ros.h>
 
@@ -22,24 +23,23 @@
 
 using namespace std;
 
-class cmd_vel_rectifier
+class VelocityAndLightControl
 {
 public:
-    cmd_vel_rectifier();
+    VelocityAndLightControl();
 
 private:
-    void init_param();
-
-    void cmd_vel_sub(const geometry_msgs::Twist::ConstPtr& msg);
-    void joy_sub(const sensor_msgs::Joy::ConstPtr& msg);
-    bool joy_feedback_array_pub(sensor_msgs::Joy& joy);
-    void show_help();
+    void InitParam();
+    void ShowHelp();
+    void CmdVelSub(const geometry_msgs::Twist::ConstPtr& msg);
+    void JoyCallback(const sensor_msgs::Joy::ConstPtr& msg);
+    bool JoyFeedbackArrayPub(sensor_msgs::Joy& joy);
     void SoundPlayerPub(int sound);
     void BatteryCallBack(const sensor_msgs::BatteryStatePtr &battery_msg);
     void CmdVelRectifiedPubStop();
     void CmdVelRectifiedPub(geometry_msgs::Twist msg_twist);
     void SoundPlayerControl();
-    void LightControl( const sensor_msgs::Joy &joy );
+    void LightControl(const sensor_msgs::Joy &joy);
 
 private:
     ros::NodeHandle ph_;
@@ -51,8 +51,6 @@ private:
     ros::Subscriber cmd_vel_sub_;
     ros::Subscriber joy_sub_;
     ros::Subscriber battery_sub_;
-    ros::Time joy_timestamp_;
-
     sensor_msgs::Joy joy_;
 
     bool robot_in_move_;
@@ -68,7 +66,7 @@ private:
 
     enum SOUND
     {
-        STOP_PLAYER = 0,
+        STOP_PLAYER = 0,  //0.停止播放
         MOVE,             //1.注意安全请避让
         ESTOP,            //2.设备故障请处理
         BATTERY_LOW,      //3.当前电量低请充电
@@ -139,3 +137,5 @@ private:
         stick,            //(车体黄色指示灯亮，辊道1绿1红2绿2红)
     };
 };
+
+#endif
