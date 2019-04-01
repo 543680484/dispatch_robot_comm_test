@@ -73,6 +73,14 @@ void VelocityAndLightControl::CmdVelRectifiedPub(geometry_msgs::Twist msg_twist)
     if ( fabs(msg_twist.linear.x) > 0.01 || fabs(msg_twist.angular.z) > 0.01 )
     {
         robot_in_move_ = true;
+        if ( fabs(msg_twist.angular.z) > 0.06 )
+        {
+            volume_ = 28;
+        }
+        else
+        {
+            volume_ = 20;
+        }
     }
     else
     {
@@ -102,7 +110,7 @@ bool VelocityAndLightControl::JoyFeedbackArrayPub(sensor_msgs::Joy& joy)
     {
         if (joy_.buttons[i] != joy.buttons[i])
         {
-            cout << "joy_feedback_array_pub i: " << i << "  " << joy.buttons[i] << endl;
+            //cout << "joy_feedback_array_pub i: " << i << "  " << joy.buttons[i] << endl;
             sensor_msgs::JoyFeedback joy_feedback;
             joy_feedback.type = 1;
             joy_feedback.id = i;
@@ -112,7 +120,7 @@ bool VelocityAndLightControl::JoyFeedbackArrayPub(sensor_msgs::Joy& joy)
     }
     if (joy_feedback_array.array.size())
     {
-        cout << "joy_feedback_array_pub joy_feedback_array.array.size: " << joy_feedback_array.array.size() << endl;
+        //cout << "joy_feedback_array_pub joy_feedback_array.array.size: " << joy_feedback_array.array.size() << endl;
         if (use_joy_feedback_)
         {
             for (int i = 0; i < joy_feedback_array.array.size(); i++)
