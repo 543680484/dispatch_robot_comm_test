@@ -69,6 +69,7 @@ protected:
     geometry_msgs::Pose2D agv_pose2d_;
 
     bool trajectorie_finished_;
+    bool resend_trajectorie_finished_;
     bool traj_exist_in_waypoints_;
     bool first_magnetic_nav_point_;
     bool get_new_move_;
@@ -76,6 +77,7 @@ protected:
     bool recv_dispatch_cancel_task_;
 
     string comm_type_;
+    string resend_comm_type_;
     string proc_name_;
     string waypoint_name_trajectorie_finished_;
 
@@ -88,7 +90,7 @@ protected:
 
     enum task_state
     {
-        IDLE,
+        IDLE = 0,
         PUB_TRAJECTORIE_ADD,
         PUB_NAVIGATION_CONTROL,
         WAIT_TASK_FINISH,

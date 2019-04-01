@@ -18,10 +18,12 @@ Dispatch::Dispatch()
     ,time_stamp_recv_usec_(0)
     ,need_hand_shake_(false)
     ,trajectorie_finished_(false)
+    ,resend_trajectorie_finished_(false)
     ,get_hand_shake_from_dispatch_(false)
     ,dispatch_trajectory_name_prefix_("dispatch_trajectory_")
     ,dispatch_waypoint_name_prefix_("dispatch_waypoint_")
     ,comm_type_("")
+    ,resend_comm_type_("")
     ,socket_fd_()
     ,trajectory_list_msg_()
     ,traj_exist_in_waypoints_(false)
@@ -141,6 +143,7 @@ GotoTest:
 void Dispatch::TrajectorieAddPub()
 {
     trajectories_add_pub_.publish(trajectory_list_msg_.trajectories[0]);
+    LINFO("TrajectorieAddPub: ", trajectory_list_msg_.trajectories[0].name);
 }
 
 void Dispatch::NavigationControlPub()
@@ -621,13 +624,13 @@ void Dispatch::DispatchCancelTask()
 
 void Dispatch::ChargeStart( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData )
 {
-    trajectory_msg.name = "charging_on_sleep";
+    trajectory_msg.name = "charging_on";
     traj_exist_in_waypoints_ = true;
 }
 
 void Dispatch::ChargeOver( yocs_msgs::Trajectory& trajectory_msg, const Json::Value& procData )
 {
-    trajectory_msg.name = "charging_off_sleep";
+    trajectory_msg.name = "charging_off";
     traj_exist_in_waypoints_ = true;
 }
 
@@ -779,7 +782,7 @@ bool Dispatch::MsgFromDispatchParse(string str_complete)
             return false;
         }
 
-        trajectory_list_msg_.trajectories.push_back(trajectory_msg);
+        trajectory_list_msg_.trajectories.push_back(trajectory_msg);//1:加入任务列表。接到新任务，加入轨迹
         return true;
     }
     else
@@ -811,10 +814,21 @@ void Dispatch::MsgToDispatch(string dev_type, string& msg_agv_to_dispatch)
     AGVInfor["ERROR"] = agv_error_code_;
 
     //一般状态，握手，任务完成
-    if ( trajectorie_finished_ )
+    if ( trajectorie_finished_ || resend_trajectorie_finished_ )
     {
         AGVInfor["Comm_ID"] = dispatch_comm_id_;
-        AGVInfor["Data_Type"] = "RT_" + comm_type_;
+        if ( resend_trajectorie_finished_ )
+        {
+            AGVInfor["Data_Type"] = "RT_" + resend_comm_type_;
+            resend_trajectorie_finished_ = false;
+            LINFO("resend_trajectorie_finished to dispatch, comm_id: ", dispatch_comm_id_);
+        }
+        else
+        {
+            AGVInfor["Data_Type"] = "RT_" + comm_type_;
+            trajectorie_finished_ = false;
+            LINFO("trajectorie_finished to dispatch, comm_id: ", dispatch_comm_id_);
+        }
 
         if ( comm_type_ == "PROC" )
         {
@@ -823,8 +837,6 @@ void Dispatch::MsgToDispatch(string dev_type, string& msg_agv_to_dispatch)
             AGVProc["Proc_Result"] = 1.0;
             AGVInfor["RT_PROC"] = AGVProc;
         }
-        trajectorie_finished_ = false;
-        LINFO("trajectorie_finished to dispatch");
     }
     else if ( need_hand_shake_ )
     {
@@ -881,7 +893,7 @@ void Dispatch::ExecuteTask()
 
     if ( task_state_ == IDLE )
     {
-        if ( !trajectory_list_msg_.trajectories.empty() )
+        if ( !trajectory_list_msg_.trajectories.empty() )//2:发布任务列表。空闲时查询轨迹是否为空，不为空发布任务轨迹
         {
             LINFO("start task: ", trajectory_list_msg_.trajectories[0].name);
             task_state_ = traj_exist_in_waypoints_ ? PUB_NAVIGATION_CONTROL : PUB_TRAJECTORIE_ADD;
@@ -891,7 +903,7 @@ void Dispatch::ExecuteTask()
         {
             TrajectorieRemovePub(trajectories_to_remove[0]);
             LINFO("trajectories_to_remove.erase: ", trajectories_to_remove[0]);
-            trajectories_to_remove.erase(trajectories_to_remove.begin());
+            trajectories_to_remove.erase(trajectories_to_remove.begin());//22:删除轨迹列表
         }
     }
     else if ( task_state_ == PUB_TRAJECTORIE_ADD )
@@ -902,7 +914,26 @@ void Dispatch::ExecuteTask()
     }
     else if ( task_state_ == PUB_NAVIGATION_CONTROL )
     {
-        if ( ros::Time::now() - trajectories_add_time > ros::Duration(0.3) )
+        if ( get_new_move_ )
+        {
+            LINFO("----get_new_move_: ", get_new_move_);
+
+            if ( !traj_exist_in_waypoints_ )
+            {//11:加入任务删除列表
+                trajectories_to_remove.push_back(trajectory_list_msg_.trajectories[0].name);//等待任务完成状态机下，任务轨迹完成或收到新move，将轨迹加入待删除列表
+                LINFO("----trajectories_to_remove.push_back: ", trajectory_list_msg_.trajectories[0].name);
+            }
+
+            LINFO("----trajectory_list_msg_.trajectories.erase: ", trajectory_list_msg_.trajectories[0].name);
+            trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());//3:任务列表里删除任务轨迹
+
+            task_state_ = IDLE;
+
+            traj_exist_in_waypoints_ = false;
+            get_new_move_ = false;
+            LINFO("----get_new_move_ = false");
+        }
+        else if ( ros::Time::now() - trajectories_add_time > ros::Duration(1.0) )
         {
             NavigationControlPub();
             task_state_ = WAIT_TASK_FINISH;
@@ -910,6 +941,7 @@ void Dispatch::ExecuteTask()
     }
     else if ( task_state_ == WAIT_TASK_FINISH )
     {
+        resend_comm_type_ = comm_type_;
         if ( comm_type_ == "PROC" && "CANCEL_CURCMD" == proc_name_ )
         {
             if (trajectorie_finished_)
@@ -925,13 +957,13 @@ void Dispatch::ExecuteTask()
                 LINFO("get_new_move_: ", get_new_move_);
 
                 if ( !traj_exist_in_waypoints_ )
-                {
-                    trajectories_to_remove.push_back(trajectory_list_msg_.trajectories[0].name);
+                {//11:加入任务删除列表
+                    trajectories_to_remove.push_back(trajectory_list_msg_.trajectories[0].name);//等待任务完成状态机下，任务轨迹完成或收到新move，将轨迹加入待删除列表
                     LINFO("trajectories_to_remove.push_back: ", trajectory_list_msg_.trajectories[0].name);
                 }
 
                 LINFO("trajectory_list_msg_.trajectories.erase: ", trajectory_list_msg_.trajectories[0].name);
-                trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());
+                trajectory_list_msg_.trajectories.erase(trajectory_list_msg_.trajectories.begin());//3:任务列表里删除任务轨迹
 
                 if (trajectorie_finished_)
                 {
@@ -966,7 +998,8 @@ void Dispatch::ExecuteTask()
         {
             if ( ros::Time::now() - task_finish_time > ros::Duration(3.0) )
             {
-                trajectorie_finished_ = true;//重发
+                //trajectorie_finished_ = true;//重发
+                resend_trajectorie_finished_ = true;
                 task_finish_time = ros::Time::now();
                 LINFO("resend trajectorie finished to dispatch");
             }
