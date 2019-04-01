@@ -23,6 +23,7 @@ MagneticTfPub::MagneticTfPub()
     , can_detected_head_marker_(false)
     , detected_tail_marker_times_(0)
     , detected_head_marker_times_(0)
+    , no_detected_magnetic_times_(0)
     , param_test_(0.0)
     , head_or_tail_(NON)
     , run_task_(false)
@@ -173,6 +174,7 @@ void MagneticTfPub::ResetParam()
 
     detected_tail_marker_times_ = 0;
     detected_head_marker_times_ = 0;
+    no_detected_magnetic_times_ = 0;
 
     get_marker_middle_pose_ = false;
 }
@@ -302,7 +304,7 @@ void MagneticTfPub::Run()
     double magnetic_tf_x = 0.0;
     double magnetic_tf_y = 0.0;
 
-    int no_detected_magnetic_times = 0;
+    //int no_detected_magnetic_times = 0;
     int no_detected_tail_marker_times = 0;
     int no_detected_head_marker_times = 0;
 
@@ -324,8 +326,8 @@ void MagneticTfPub::Run()
         {
             MagneticDetectStatusPub(false);
             ROS_WARN("both head and tail do not detected magnetic");
-            ++ no_detected_magnetic_times;
-            if ( no_detected_magnetic_times > 20*rate_hz )
+            ++ no_detected_magnetic_times_;
+            if ( no_detected_magnetic_times_ > 20*rate_hz )
             {
                 StopRun();
             }
@@ -338,7 +340,7 @@ void MagneticTfPub::Run()
         {
             MagneticDetectStatusPub(true);
 
-            no_detected_magnetic_times = 0;
+            no_detected_magnetic_times_ = 0;
             int sign_by_orientation = 0;
 
             if ( head_or_tail_ == HEAD )

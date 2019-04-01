@@ -39,6 +39,7 @@ class MagneticTfPub
 
     int detected_tail_marker_times_;
     int detected_head_marker_times_;
+    int no_detected_magnetic_times_;
 
     int points_num_consider_detected_magnetic_marker_;
 
